@@ -1,0 +1,19 @@
+# .ruff.toml
+
+target-version = "py310"
+line-length = 100
+
+# Inclure uniquement les fichiers Python de ces répertoires
+include = ["lucenai/**/*.py", "scripts/**/*.py"]
+
+# Répertoires à ignorer
+exclude = [
+    "notebooks",
+    "data",
+    "docs",
+    "venv",
+    "__pycache__"
+]
+
+[lint]
+select = ["E", "F", "I"]  # E: pycodestyle, F: pyflakes, I: isort

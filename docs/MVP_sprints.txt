@@ -1,0 +1,37 @@
+🔹 Sprint 1 — Création du dataset
+	- Recherche d’un dataset pertinent (tweets liés au BTC + sentiment associé)
+	- Exploration et nettoyage initial des données
+	- Conversion/normalisation/limitation des données
+	- Équilibrage des classes
+	- Découpage en jeux d’entraînement/test
+➡️ Livrable : Notebook Jupyter prêt à l'entraînement
+
+🔹 Sprint 2 — Préparation du modèle
+	- Configuration d’un environnement NLP (LightingAI ou équivalent)
+	- Sélection d’un modèle pré-entraîné adapté à la tâche (transformer, LSTM, etc.)
+	- Embedding du dataset selon le modèle choisi
+	- Optimisation du dataset pour TensorFlow (tokenisation, format, batching)
+➡️ Livrable : Notebook Jupyter avec données prêtes à être injectées dans un modèle
+
+🔹 Sprint 3 — Conception du modèle
+	- Définition de l’architecture du modèle (nombre de couches, neurones, etc.)
+	- Visualisation et test de la structure (summary, diagrammes, etc.)
+	- Compilation du modèle (choix des hyperparamètres : loss, optimizer, metrics)
+	- Ajout de callbacks (early stopping, checkpoints, logs) pour pilotage d'entraînement
+➡️ Livrable : Notebook Jupyter avec modèle compilé prêt à l'entraînement
+
+🔹 Sprint 4 — Entraînement du modèle
+	- Lancement de l’entraînement sur le dataset
+	- Visualisation et analyse des courbes de perte/précision
+	- Évaluation des performances : précision, matrice de confusion, F1, rapport de classification
+	- Test de prédiction interactive sur un petit jeu de validation synthétique
+➡️ Livrables :
+	- Application Python avec le modèle entraîné
+	- Fichiers du modèle sauvegardés (H5 ou SavedModel)
+
+🔹 Sprint 5 — Développement du frontend (MVP)
+	- Intégration du modèle dans une API avec FastAPI
+	- Développement du frontend en ReactJS pour saisir une phrase/tweet et afficher la prédiction
+	- Intégration et tests de bout en bout
+	- Validation fonctionnelle du MVP
+➡️ Livrable : Application web complète (MVP) utilisable en local ou hébergée

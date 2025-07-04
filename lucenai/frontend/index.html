@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DYOR Crypto Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="flex items-center justify-between">
+                <h1 class="header__title">DYOR Crypto Analyzer</h1>
+                <div class="flex items-center gap-16">
+                    <div class="crypto-selector">
+                        <select id="cryptoSelect" class="form-control crypto-select">
+                            <option value="BTC">Bitcoin (BTC)</option>
+                            <option value="ETH">Ethereum (ETH)</option>
+                            <option value="SOL">Solana (SOL)</option>
+                            <option value="TAO">Bittensor (TAO)</option>
+                            <option value="LINK">Chainlink (LINK)</option>
+                            <option value="NEAR">NEAR Protocol (NEAR)</option>
+                            <option value="ONDO">Ondo Finance (ONDO)</option>
+                            <option value="KAS">Kaspa (KAS)</option>
+                            <option value="RENDER">Render Network (RENDER)</option>
+                            <option value="AAVE">Aave (AAVE)</option>
+                        </select>
+                    </div>
+                    <button id="themeToggle" class="btn btn--secondary theme-toggle">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Score DYOR Global -->
+            <div class="dyor-score-section">
+                <div class="card">
+                    <div class="card__body">
+                        <div class="dyor-score">
+                            <div class="dyor-score__info">
+                                <h2 id="cryptoName">Bitcoin</h2>
+                                <div class="dyor-score__value">
+                                    <span id="dyorScore">85</span>
+                                    <span class="dyor-score__max">/100</span>
+                                </div>
+                                <div id="dyorRating" class="status status--success">Excellent</div>
+                            </div>
+                            <div class="dyor-score__visual">
+                                <div class="score-gauge">
+                                    <div id="scoreGauge" class="score-gauge__fill" style="width: 85%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+			
+			<!-- Feedback on X (visible uniquement pour BTC) -->
+			<div id="dyor_feelings" class="dyor-score-section" style="display: none;">
+				<div class="card">
+					<div class="card__header">
+						<h3>💬 Feedback on X</h3>
+					</div>
+					<div class="card__body">
+						<p>Analyse des sentiments des tweets sur BTC :</p>
+						<div class="score-breakdown">
+							<div class="score-item">
+								<div class="score-item__label">Positifs</div>
+								<div class="score-item__bar">
+									<div class="score-bar" style="width: 70%; background-color: var(--color-success);"></div>
+								</div>
+								<div class="score-item__value">70%</div>
+							</div>
+							<div class="score-item">
+								<div class="score-item__label">Négatifs</div>
+								<div class="score-item__bar">
+									<div class="score-bar" style="width: 30%; background-color: var(--color-error);"></div>
+								</div>
+								<div class="score-item__value">30%</div>
+							</div>
+						</div>
+						<p style="margin-top: 16px;">Conclusion : le sentiment global autour de Bitcoin est plutôt positif en ce moment.</p>
+					</div>
+				</div>
+			</div>
+
+            <!-- Grille principale -->
+            <div class="analysis-grid">
+                <!-- Vue d'ensemble -->
+                <div class="analysis-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>📊 Vue d'ensemble</h3>
+                        </div>
+                        <div class="card__body">
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <div class="metric__label">Prix actuel</div>
+                                    <div id="currentPrice" class="metric__value">$105,145.40</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric__label">Market Cap</div>
+                                    <div id="marketCap" class="metric__value">$2.09T</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric__label">Volume 24h</div>
+                                    <div id="volume24h" class="metric__value">$68.15B</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric__label">Rang</div>
+                                    <div id="marketRank" class="metric__value">#1</div>
+                                </div>
+                            </div>
+                            <div class="variations">
+                                <div class="variation-item">
+                                    <span class="variation-label">24h:</span>
+                                    <span id="variation24h" class="variation-value positive">+3.43%</span>
+                                </div>
+                                <div class="variation-item">
+                                    <span class="variation-label">7j:</span>
+                                    <span id="variation7d" class="variation-value positive">+1.40%</span>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="priceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analyse fondamentale -->
+                <div class="analysis-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>🔍 Analyse fondamentale</h3>
+                        </div>
+                        <div class="card__body">
+                            <div class="fundamental-item">
+                                <div class="fundamental-label">Technologie</div>
+                                <div id="technology" class="fundamental-value">Proof of Work, Blockchain</div>
+                            </div>
+                            <div class="fundamental-item">
+                                <div class="fundamental-label">Cas d'usage</div>
+                                <div id="useCase" class="fundamental-value">Réserve de valeur, Moyen de paiement</div>
+                            </div>
+                            <div class="fundamental-item">
+                                <div class="fundamental-label">Avantages</div>
+                                <div id="advantages" class="fundamental-tags"></div>
+                            </div>
+                            <div class="fundamental-item">
+                                <div class="fundamental-label">Défis</div>
+                                <div id="challenges" class="fundamental-tags"></div>
+                            </div>
+                            <div class="supply-info">
+                                <div class="supply-item">
+                                    <span class="supply-label">Supply circulant:</span>
+                                    <span id="supplyCirculating">19.88M</span>
+                                </div>
+                                <div class="supply-item">
+                                    <span class="supply-label">Supply max:</span>
+                                    <span id="supplyMax">21M</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Métriques Onchain -->
+                <div class="analysis-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>⛓️ Métriques Onchain</h3>
+                        </div>
+                        <div class="card__body">
+                            <div class="onchain-metrics">
+                                <div class="onchain-metric">
+                                    <div class="onchain-metric__label">Adresses actives</div>
+                                    <div id="activeAddresses" class="onchain-metric__value">1M+</div>
+                                </div>
+                                <div class="onchain-metric">
+                                    <div class="onchain-metric__label">Frais moyens</div>
+                                    <div id="avgFees" class="onchain-metric__value">$15-50</div>
+                                </div>
+                                <div class="onchain-metric">
+                                    <div class="onchain-metric__label">Temps confirmation</div>
+                                    <div id="confirmationTime" class="onchain-metric__value">10 min</div>
+                                </div>
+                                <div class="onchain-metric">
+                                    <div class="onchain-metric__label" id="specialMetricLabel">Hash Rate</div>
+                                    <div id="specialMetricValue" class="onchain-metric__value">700+ EH/s</div>
+                                </div>
+                            </div>
+                            <div class="network-health">
+                                <div class="network-indicator">
+                                    <span class="network-label">Santé du réseau:</span>
+                                    <div id="networkHealth" class="status status--success">Excellent</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicateurs risque/opportunité -->
+                <div class="analysis-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>⚡ Risque & Opportunité</h3>
+                        </div>
+                        <div class="card__body">
+                            <div class="score-breakdown">
+                                <div class="score-item">
+                                    <div class="score-item__label">Performance Prix</div>
+                                    <div class="score-item__bar">
+                                        <div id="priceScore" class="score-bar" style="width: 75%"></div>
+                                    </div>
+                                    <div class="score-item__value">75%</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-item__label">Solidité Tech</div>
+                                    <div class="score-item__bar">
+                                        <div id="techScore" class="score-bar" style="width: 95%"></div>
+                                    </div>
+                                    <div class="score-item__value">95%</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-item__label">Métriques Onchain</div>
+                                    <div class="score-item__bar">
+                                        <div id="onchainScore" class="score-bar" style="width: 90%"></div>
+                                    </div>
+                                    <div class="score-item__value">90%</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-item__label">Position Marché</div>
+                                    <div class="score-item__bar">
+                                        <div id="marketScore" class="score-bar" style="width: 100%"></div>
+                                    </div>
+                                    <div class="score-item__value">100%</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-item__label">Potentiel Croissance</div>
+                                    <div class="score-item__bar">
+                                        <div id="growthScore" class="score-bar" style="width: 65%"></div>
+                                    </div>
+                                    <div class="score-item__value">65%</div>
+                                </div>
+                            </div>
+                            <div class="recommendations">
+                                <h4>Recommandations</h4>
+                                <div id="recommendations" class="recommendation-list">
+                                    <div class="recommendation-item status--success">✅ Actif de référence stable</div>
+                                    <div class="recommendation-item status--warning">⚠️ Surveiller la volatilité</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+</main>
+
+    <script src="app.js"></script>
+</body>
+</html>
