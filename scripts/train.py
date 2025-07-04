@@ -20,8 +20,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from lucenai.training.preprocess import load_and_preprocess_dataset
 from lucenai.training.tokenizer import get_tokenizer_and_dataset
-# ruff: noqa
-# from lucenai.training.model import train_distilbert_model
+from lucenai.training.model import train_distilbert_model
 # ruff: noqa
 # from lucenai.training.test import predict_on_csv
 from lucenai.training.utils import configure_environment_for_nlp
@@ -58,7 +57,7 @@ def main():
     )
 
     # Build, fine-tune, compile, fit and save model
-    # train_distilbert_model(train_dataset, val_dataset, tokenizer)
+    train_distilbert_model(train_dataset, val_dataset, tokenizer)
 
     # Test model
     # predict_on_csv()

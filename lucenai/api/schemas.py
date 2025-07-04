@@ -11,6 +11,7 @@ License: MIT
 
 from pydantic import BaseModel
 
+
 class PredictionRequest(BaseModel):
     """
     Request schema for sentiment prediction.

@@ -12,10 +12,12 @@ License: MIT
 """
 
 import re
-import pandas as pd
 from typing import Tuple, Union
+
+import pandas as pd
 from sklearn.model_selection import train_test_split
-from lucenai.config.settings import TRAINING_PARAMS, DATA_PATHS
+
+from lucenai.config.settings import DATA_PATHS, TRAINING_PARAMS
 
 VALID_LABELS = {"positive": 1, "negative": 0}
 
@@ -154,7 +156,8 @@ def balance_classes(df: pd.DataFrame) -> pd.DataFrame:
 
 def format_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Formats the DataFrame: drops unnecessary columns, renames columns, resets index, and reorders columns.
+    Formats the DataFrame: drops unnecessary columns, renames columns,
+    resets index, and reorders columns.
 
     Args:
         df (pd.DataFrame): Input DataFrame

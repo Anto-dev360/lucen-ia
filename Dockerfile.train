@@ -1,5 +1,3 @@
-# Docker.train
-
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 # Set Python version and base tools
@@ -12,10 +10,10 @@ RUN apt-get update && apt-get install -y \
 
 RUN ln -sf python3.10 /usr/bin/python && ln -sf pip3 /usr/bin/pip
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy project files
+# Copy only essential project files
 COPY ./lucenai /app/lucenai
 COPY ./scripts/train.py /app/scripts/train.py
 COPY ./requirements_GPU.txt /app/requirements.txt
@@ -24,9 +22,9 @@ COPY ./requirements_GPU.txt /app/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure CUDA is visible (needed for TF)
+# CUDA config
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
 ENV TF_CPP_MIN_LOG_LEVEL=2
 
-# Entrypoint for training (can be overridden)
+# Entrypoint
 CMD ["python", "scripts/train.py"]

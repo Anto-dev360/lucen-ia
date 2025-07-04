@@ -37,7 +37,7 @@ DATA_PATHS = DataPaths()
 @dataclass
 class ModelPaths:
     base: Path = BASE_DIR / "lucenai" / "models" / "distilbert_sentiment"
-    weights: Path = base / "tf_model.h5"
+    weights: Path = base / "model.keras"
     tokenizer: Path = base / "tokenizer"
     config: Path = base / "config.json"
 
@@ -53,10 +53,11 @@ MODEL_PATHS = ModelPaths()
 class TrainingParams:
     model_name: str = "distilbert-base-uncased"
     batch_size: int = 32
-    epochs: int = 3
+    epochs: int = 5
     max_len: int = 256
     learning_rate: float = 2e-5
     seed: int = 42
+    dropout_rate: float = 0.3
 
 TRAINING_PARAMS = TrainingParams()
 

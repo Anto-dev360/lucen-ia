@@ -9,10 +9,10 @@ Project: lucen_ai
 License: MIT
 """
 
-import tensorflow as tf
-from transformers import AutoTokenizer
 import numpy as np
-from src.config import TOKENIZER_PATH, MODEL_WEIGHTS_PATH
+import tensorflow as tf
+from src.config import MODEL_WEIGHTS_PATH, TOKENIZER_PATH
+from transformers import AutoTokenizer
 
 # Load model and tokenizer at startup
 model = tf.keras.models.load_model(MODEL_WEIGHTS_PATH)

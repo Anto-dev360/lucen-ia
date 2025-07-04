@@ -9,11 +9,12 @@ Project: lucen_ai
 License: MIT
 """
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
 from lucenai.api.predict import predict_sentiment
 from lucenai.config import settings
-import uvicorn
 
 app = FastAPI(
     title=settings.API_TITLE,

@@ -153,7 +153,7 @@ From the project root:
 
 ```bash
 # Build training image (GPU)
-docker build -f Docker.train -t lucen-train .
+docker build -f Dockerfile.train -t lucen-ia-train .
 
 # Build API image (CPU)
 docker build -f Docker.api -t lucen-api .
@@ -163,15 +163,34 @@ docker build -f Docker.api -t lucen-api .
 
 ### 🎓 2. Run Training (GPU-enabled)
 
+To train the model on GPU using Docker, execute the following command from the project root:
+
 ```bash
-docker run --gpus all lucen-train
+docker run --rm --gpus all \
+  -v $(pwd)/lucenai/models:/app/lucenai/models \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/scripts:/app/scripts \
+  -v $(pwd)/notebooks:/app/notebooks \
+  -v $(pwd)/lucenai/config:/app/lucenai/config \
+  lucen-ia-train
 ```
 
-> This will:
-> - Load and clean BTC tweet data
-> - Tokenize with DistilBERT
-> - Fine-tune the model
-> - Save it to `/app/lucenai/models/`
+This command will:
+
+- Load the BTC tweet dataset from `/app/data`
+- Preprocess and tokenize the tweets using DistilBERT
+- Fine-tune the sentiment classification model
+- Saves the trained model (`model.keras`), configuration (`config.json`), and tokenizer files to:
+
+```bash
+lucenai/models/distilbert_sentiment/
+├── config.json
+├── model.keras
+└── tokenizer/
+    ├── vocab.txt
+    ├── tokenizer_config.json
+    └── special_tokens_map.json
+```
 
 ---
 

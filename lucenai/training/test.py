@@ -12,9 +12,10 @@ License: MIT
 
 import pandas as pd
 import tensorflow as tf
+from config.settings import DATA_PATHS, MODEL_PATHS, TRAINING_PARAMS
 from transformers import DistilBertTokenizerFast
+
 from lucenai.training.tokenizer import encode_single_text
-from config.settings import TRAINING_PARAMS, MODEL_PATHS, DATA_PATHS
 
 
 def load_model_and_tokenizer(model_path=None, tokenizer_name=None):

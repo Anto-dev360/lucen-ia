@@ -10,14 +10,16 @@ Project: lucen_ai
 License: MIT
 """
 
-from transformers import DistilBertTokenizerFast
 import tensorflow as tf
+from transformers import DistilBertTokenizerFast
+
 from lucenai.config.settings import TRAINING_PARAMS
 
 
 def get_tokenizer_and_dataset(train_texts, train_labels, val_texts, val_labels):
     """
-    Loads the DistilBERT tokenizer and prepares tokenized TensorFlow datasets for training and validation.
+    Loads the DistilBERT tokenizer and prepares tokenized TensorFlow
+    datasets for training and validation.
 
     Args:
         train_texts (list): List of training text samples.

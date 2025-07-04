@@ -2,9 +2,11 @@
 import os
 import random
 import warnings
+
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+
 
 def configure_environment_for_nlp(seed: int = 42):
     """
@@ -54,8 +56,8 @@ def configure_gpu_for_nlp():
     """
     Configures TensorFlow to use the first available GPU (if any) with memory growth enabled.
 
-    This setup is recommended for large NLP models such as DistilBERT to avoid out-of-memory (OOM) errors.
-    If no GPU is found, it gracefully defaults to CPU usage.
+    This setup is recommended for large NLP models such as DistilBERT to avoid 
+    out-of-memory (OOM) errors. If no GPU is found, it gracefully defaults to CPU usage.
 
     Returns:
         bool: True if GPU is configured, False if running on CPU.
@@ -82,7 +84,8 @@ def configure_gpu_for_nlp():
 
 def set_global_seed(seed: int = 42):
     """
-    Sets the global random seed across Python, NumPy, and TensorFlow to ensure reproducible behavior.
+    Sets the global random seed across Python, NumPy, and TensorFlow to
+    ensure reproducible behavior.
 
     Args:
         seed (int): The seed value to apply (default is 42)
