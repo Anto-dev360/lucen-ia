@@ -37,9 +37,8 @@ DATA_PATHS = DataPaths()
 @dataclass
 class ModelPaths:
     base: Path = BASE_DIR / "lucenai" / "models" / "distilbert_sentiment"
-    weights: Path = base / "model.keras"
+    best_model: Path = base / "checkpoint" / "best_model" 
     tokenizer: Path = base / "tokenizer"
-    config: Path = base / "config.json"
 
     def ensure_dirs(self):
         self.base.mkdir(parents=True, exist_ok=True)

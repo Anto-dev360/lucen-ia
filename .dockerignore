@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Environment files
+.env
+
+# Logs and runtime files
+*.log
+
+# OS metadata files
+.DS_Store
+
+# Large data or model artifacts (mounted as volumes)
+data/
+lucenai/models/
+
+# Model weights or checkpoints (we save them externally)
+*.h5
+*.keras
+*.ckpt
+
+# Temporary files
+*.tmp
+*.bak

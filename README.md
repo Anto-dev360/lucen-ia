@@ -4,7 +4,6 @@
 
 This project aims to analyze **Bitcoin (BTC)** sentiment using public Twitter data. It leverages pre-trained NLP models—especially **DistilBERT**—through a full pipeline from preprocessing to deployment via FastAPI.
 
----
 
 ## 🧩 Key Pipeline Stages
 
@@ -14,7 +13,6 @@ This project aims to analyze **Bitcoin (BTC)** sentiment using public Twitter da
 - 🧪 **Evaluation** on a dedicated test set
 - 🌐 **Deployment** of a REST API with FastAPI
 
----
 
 ## 📁 Project Structure
 
@@ -22,9 +20,12 @@ This project aims to analyze **Bitcoin (BTC)** sentiment using public Twitter da
 lucen-ai/
 ├── models/                            # 🧠 Fine-tuned models (saved checkpoints)
 │   └── distilbert_sentiment/
-│       ├── config.json
-│       ├── tokenizer/
-│       └── tf_model.h5
+│        ├── config.json               # Custom config (e.g., training parameters)
+│        ├── model.keras               # Full trained Keras model (TensorFlow format)
+│        └── tokenizer/                # Hugging Face tokenizer artifacts
+│            ├── vocab.txt
+│            ├── tokenizer_config.json
+│            └── special_tokens_map.json
 ├── data/                              # 📊 Dataset (raw)
 │   └── BTC_Tweets_Sentiments.csv
 ├── notebooks/                         # 📓 Jupyter notebooks (EDA & experimentation)
@@ -62,7 +63,6 @@ lucen-ai/
 └── LICENSE
 ```
 
----
 
 ## 📒 Jupyter Notebooks
 
@@ -88,20 +88,52 @@ tensorboard --logdir notebooks/logs
 
 > Logs are automatically saved in `notebooks/logs/` with a timestamped subdirectory.
 
----
 
 ## 🧠 Pretrained Model
 
-The integrated model is a fine-tuned `distilbert-base-uncased` for binary sentiment classification. It is stored under:
+The sentiment analysis model is built on top of **`distilbert-base-uncased`**, a lightweight and fast version of BERT. It has been fine-tuned specifically for **binary classification** of Bitcoin-related tweet sentiments (`positive` vs `negative`).
+
+### 🏗️ Architecture Summary
+
+The model architecture defined in `model.py` follows this structure:
+
+1. **DistilBERT Backbone**  
+   - Loaded from Hugging Face via `TFAutoModel.from_pretrained("distilbert-base-uncased")`  
+   - Outputs contextualized embeddings for each token
+
+2. **[CLS] Token Pooling**  
+   - The first token (index `[0]`) from the last hidden state is used as a global sentence representation
+
+3. **Dropout Layer**  
+   - Applied after the `[CLS]` token for regularization  
+   - Dropout rate defined in `TRAINING_PARAMS.dropout_rate` (default: `0.3`)
+
+4. **Dense Projection Layer**  
+   - A fully-connected layer with `256` units and `ReLU` activation  
+   - Adds non-linearity and improves learning capacity
+
+5. **Binary Classification Head**  
+   - A final `Dense` layer with `1` output unit and `sigmoid` activation  
+   - Outputs a probability ∈ [0, 1] for the `positive` class
+
+### 📦 Saved Model Format
+
+After training, the model and tokenizer are saved in the following structure:
 
 ```
-models/distilbert_sentiment/
-├── config.json
-├── tokenizer/
-└── tf_model.h5
+lucenai/models/distilbert_sentiment/
+├── config.json                # Custom config (e.g., training parameters)
+├── model.keras                # Full trained Keras model (TensorFlow format)
+└── tokenizer/                 # Hugging Face tokenizer artifacts
+    ├── vocab.txt
+    ├── tokenizer_config.json
+    └── special_tokens_map.json
 ```
 
----
+### ✅ Notes
+- The model supports inference with TensorFlow's `.keras` format (recommended for Keras 3+).
+- Tokenizer artifacts are compatible with Hugging Face Transformers and ensure consistent preprocessing for inference and deployment.
+
 
 ## 🌐 API Usage (FastAPI)
 
@@ -136,7 +168,6 @@ Response:
 }
 ```
 
----
 
 ## 🐳 Docker
 
@@ -145,7 +176,6 @@ This project uses two separate Dockerfiles to manage training and deployment env
 - `Docker.train`: for training the DistilBERT model on GPU (L4, Lightning AI-compatible)
 - `Docker.api`: for serving the FastAPI + frontend on CPU
 
----
 
 ### 🐳 1. Build Docker Images
 
@@ -159,7 +189,6 @@ docker build -f Dockerfile.train -t lucen-ia-train .
 docker build -f Docker.api -t lucen-api .
 ```
 
----
 
 ### 🎓 2. Run Training (GPU-enabled)
 
@@ -180,19 +209,8 @@ This command will:
 - Load the BTC tweet dataset from `/app/data`
 - Preprocess and tokenize the tweets using DistilBERT
 - Fine-tune the sentiment classification model
-- Saves the trained model (`model.keras`), configuration (`config.json`), and tokenizer files to:
+- Saves the trained model (`model.keras`), configuration (`config.json`), and tokenizer files to: `lucenai/models/distilbert_sentiment/`
 
-```bash
-lucenai/models/distilbert_sentiment/
-├── config.json
-├── model.keras
-└── tokenizer/
-    ├── vocab.txt
-    ├── tokenizer_config.json
-    └── special_tokens_map.json
-```
-
----
 
 ### 🌐 3. Serve the API (CPU)
 
@@ -205,7 +223,6 @@ Then visit:
 - 🖥️ Frontend: [http://localhost:8000](http://localhost:8000)
 - 📚 Swagger Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
----
 
 ## 📚 Libraries Used
 
@@ -221,7 +238,6 @@ This project is built upon a robust and modern machine learning stack:
 | 🌐 [FastAPI](https://fastapi.tiangolo.com/) | High-performance web framework for exposing the model as an API |
 | 🚀 [Uvicorn](https://www.uvicorn.org/) | ASGI server to run the FastAPI backend |
 
----
 
 ## 📬 Contact
 

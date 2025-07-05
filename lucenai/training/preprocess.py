@@ -63,7 +63,7 @@ def load_and_preprocess_dataset(return_test: bool = False):
         test_labels = test_df["label"].tolist()
         return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
 
-    return train_texts, train_labels, val_texts, val_labels
+    return train_texts, train_labels, val_texts, val_labels, None, None
 
 
 def clean_and_encode_labels(df: pd.DataFrame) -> pd.DataFrame:

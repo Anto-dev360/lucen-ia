@@ -10,25 +10,32 @@ Project: lucen_ai
 License: MIT
 """
 
+from typing import List, Tuple, Dict
+
 import tensorflow as tf
-from transformers import DistilBertTokenizerFast
+from transformers import DistilBertTokenizerFast, BatchEncoding
 
 from lucenai.config.settings import TRAINING_PARAMS
 
 
-def get_tokenizer_and_dataset(train_texts, train_labels, val_texts, val_labels):
+def get_tokenizer_and_dataset(
+    train_texts: List[str],
+    train_labels: List[int],
+    val_texts: List[str],
+    val_labels: List[int]
+) -> Tuple[DistilBertTokenizerFast, tf.data.Dataset, tf.data.Dataset]:
     """
     Loads the DistilBERT tokenizer and prepares tokenized TensorFlow
     datasets for training and validation.
 
     Args:
-        train_texts (list): List of training text samples.
-        train_labels (list): Corresponding labels for the training samples.
-        val_texts (list): List of validation text samples.
-        val_labels (list): Corresponding labels for the validation samples.
+        train_texts (List[str]): List of training text samples.
+        train_labels (List[int]): Corresponding labels for the training samples.
+        val_texts (List[str]): List of validation text samples.
+        val_labels (List[int]): Corresponding labels for the validation samples.
 
     Returns:
-        tuple: (tokenizer, train_dataset, val_dataset)
+        Tuple:
             - tokenizer: HuggingFace DistilBERT tokenizer
             - train_dataset: tf.data.Dataset for training
             - val_dataset: tf.data.Dataset for validation
@@ -36,18 +43,24 @@ def get_tokenizer_and_dataset(train_texts, train_labels, val_texts, val_labels):
     print("📦 Loading tokenizer...")
     tokenizer = DistilBertTokenizerFast.from_pretrained(TRAINING_PARAMS.model_name)
 
-    def tokenize(texts, labels):
+    def tokenize(texts: List[str], labels: List[int]) -> tf.data.Dataset:
+        # Tokenize and convert to NumPy arrays for TF Dataset compatibility
         encodings = tokenizer(
             texts,
             truncation=True,
-            padding='max_length',
+            padding="max_length",
             max_length=TRAINING_PARAMS.max_len,
-            return_tensors='tf'
+            return_tensors="np"
         )
+
         dataset = tf.data.Dataset.from_tensor_slices((
-            dict(encodings),
-            labels
+            {
+                "input_ids": encodings["input_ids"],
+                "attention_mask": encodings["attention_mask"]
+            },
+            tf.convert_to_tensor(labels, dtype=tf.int32)
         ))
+
         return dataset.shuffle(1000).batch(TRAINING_PARAMS.batch_size).prefetch(tf.data.AUTOTUNE)
 
     print("📄 Tokenizing training and validation sets...")
@@ -56,27 +69,28 @@ def get_tokenizer_and_dataset(train_texts, train_labels, val_texts, val_labels):
 
     return tokenizer, train_dataset, val_dataset
 
-def encode_single_text(text, tokenizer):
+
+def encode_single_text(text: str, tokenizer: DistilBertTokenizerFast) -> Dict[str, tf.Tensor]:
     """
-    Tokenizes and encodes a single input tweet for sentiment prediction with DistilBERT.
+    Tokenizes and encodes a single input tweet for DistilBERT sentiment classification.
 
     Args:
         text (str): The tweet or sentence to analyze.
-        tokenizer (DistilBertTokenizerFast): Loaded tokenizer instance.
-        max_len (int): Maximum token length for padding/truncation.
+        tokenizer (DistilBertTokenizerFast): Loaded HuggingFace tokenizer instance.
 
     Returns:
-        dict: Dictionary of encoded tensors (input_ids, attention_mask)
-              formatted for TensorFlow model input.
+        Dict[str, tf.Tensor]: Dictionary containing 'input_ids' and 'attention_mask'
+                              formatted for TensorFlow model input.
     """
-    encoded = tokenizer(
+    encoded: BatchEncoding = tokenizer(
         text,
         truncation=True,
         padding='max_length',
         max_length=TRAINING_PARAMS.max_len,
         return_tensors='tf'
     )
+
     return {
-        "input_ids": encoded["input_ids"],
-        "attention_mask": encoded["attention_mask"]
+        "input_ids": tf.convert_to_tensor(encoded["input_ids"]),
+        "attention_mask": tf.convert_to_tensor(encoded["attention_mask"])
     }

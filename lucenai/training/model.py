@@ -11,19 +11,15 @@ License: MIT
 """
 
 from pathlib import Path
-from typing import List, Tuple
+import json
+from typing import List, Tuple, Optional
+import time
 
 import tensorflow as tf
 from tensorflow.data import Dataset
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from tensorflow.keras.models import Model
-from transformers import PreTrainedTokenizerFast, TFAutoModel
-
-try:
-    from tensorflow_addons.metrics import F1Score
-    TFA_AVAILABLE = True
-except ImportError:
-    TFA_AVAILABLE = False
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, History
+from tensorflow.keras.models import Model, load_model
+from transformers import PreTrainedTokenizerFast, TFAutoModel, DistilBertTokenizerFast, TFDistilBertModel
 
 try:
     from tensorflow_addons.metrics import F1Score
@@ -34,28 +30,30 @@ except ImportError:
 from lucenai.config.settings import CALLBACK_CONFIG, MODEL_PATHS, TRAINING_PARAMS
 
 
-def create_sentiment_model(distilbert_model, dropout_rate=TRAINING_PARAMS.dropout_rate):
+def create_sentiment_model(
+    distilbert_model: TFDistilBertModel,
+    dropout_rate: float = TRAINING_PARAMS.dropout_rate
+) -> Tuple[tf.keras.Model, TFDistilBertModel]:
     """
-    Builds a sentiment classification model based on DistilBERT.
+    Builds a Keras sentiment classification model using a pretrained DistilBERT backbone.
 
     Architecture:
-    1. Pretrained DistilBERT base
-    2. Extract [CLS] token representation
-    3. Dropout for regularization
-    4. Dense projection layer (optional but helpful)
-    5. Dense layer for binary classification
+    1. Input layers for token IDs and attention masks
+    2. DistilBERT base
+    3. [CLS] token extraction
+    4. Dropout + Dense + Sigmoid for binary classification
 
     Args:
-        distilbert_model: Pretrained DistilBERT model
-        dropout_rate: Dropout rate (default: from TRAINING_PARAMS)
+        distilbert_model (TFDistilBertModel): A pretrained DistilBERT model.
+        dropout_rate (float): Dropout rate for regularization.
 
     Returns:
-        model: Full Keras model
-        base_model: The DistilBERT model (for optional fine-tuning access)
+        Tuple:
+            - model (tf.keras.Model): Fully assembled Keras model.
+            - distilbert_model (TFDistilBertModel): The base transformer model.
     """
     print("🏗️ Building full architecture...")
 
-    # Input layers
     input_ids = tf.keras.layers.Input(
         shape=(TRAINING_PARAMS.max_len,),
         dtype=tf.int32,
@@ -68,7 +66,6 @@ def create_sentiment_model(distilbert_model, dropout_rate=TRAINING_PARAMS.dropou
     )
     print("   ✅ Input layers created")
 
-    # DistilBERT
     distilbert_output = distilbert_model(
         input_ids=input_ids,
         attention_mask=attention_mask
@@ -76,33 +73,26 @@ def create_sentiment_model(distilbert_model, dropout_rate=TRAINING_PARAMS.dropou
     sequence_output = distilbert_output.last_hidden_state
     print("   ✅ DistilBERT integrated")
 
-    # Pooling ([CLS] token)
     cls_token = sequence_output[:, 0, :]
     print("   ✅ [CLS] token extracted")
 
-    # Dropout layer
     dropout_output = tf.keras.layers.Dropout(dropout_rate, name='dropout')(cls_token)
     print(f"   ✅ Dropout applied (rate={dropout_rate})")
 
-    # Dense projection layer (adds non-linearity and helps learning)
     dense_projection = tf.keras.layers.Dense(
         256, activation='relu', name='projection'
     )(dropout_output)
-    print("   ✅ Dense projection layer added (256 units, ReLU)")
+    print("   ✅ Dense projection layer added")
 
-    # Classification layer
     predictions = tf.keras.layers.Dense(
-        1,
-        activation='sigmoid',
-        name='classifier'
+        1, activation='sigmoid', name='classifier'
     )(dense_projection)
     print("   ✅ Classification layer added")
 
-    # Final model
     model = tf.keras.Model(
-        inputs=[input_ids, attention_mask],
+        inputs={"input_ids": input_ids, "attention_mask": attention_mask},
         outputs=predictions,
-        name='DistilBERT_Sentiment_Classifier'
+        name="DistilBERT_Sentiment_Classifier"
     )
     print("\n✅ Model successfully built!")
 
@@ -135,7 +125,6 @@ def build_model(transformer_model_name: str) -> tf.keras.Model:
     print(f"   📏 Input length: {TRAINING_PARAMS.max_len} tokens")
     print(f"   🎲 Dropout rate: {TRAINING_PARAMS.dropout_rate}")
 
-    # Affichage du résumé du modèle
     print("📋 Model detailed architecture")
     print("═" * 80)
     model.summary()
@@ -235,34 +224,8 @@ def compile_model(
     print(f"   📊 Trainable parameters: {model.count_params():,}")
     print(f"   ⚡ Optimizer: {optimizer.__class__.__name__}")
     print(f"   📉 Loss function: {loss_fn.__class__.__name__}")
-    print(f"   📈 Metrics: {[m.name for m in metrics]}")
+    print(f"   📈 Metrics: {[m.name for m in metrics]}\n")
 
-    print("\n🚀 Ready to train!")
-    return model
-
-
-def launch_model_training(
-    model: Model,
-    train_dataset: Dataset,
-    val_dataset: Dataset
-) -> Model:
-    """
-    Launches the model training process using the configured datasets and callbacks.
-
-    Args:
-        model (Model): The compiled TensorFlow Keras model to be trained.
-        train_dataset (tf.data.Dataset): Dataset used for training.
-        val_dataset (tf.data.Dataset): Dataset used for validation during training.
-
-    Returns:
-        Model: The trained Keras model.
-    """
-    model.fit(
-        train_dataset,
-        validation_data=val_dataset,
-        epochs=TRAINING_PARAMS.epochs,
-        callbacks=get_callbacks()
-    )
     return model
 
 
@@ -290,7 +253,7 @@ def get_callbacks() -> list:
             verbose=1
         ),
         ModelCheckpoint(
-            filepath=str(MODEL_PATHS.base / "checkpoint" / "best_model.keras"),
+            filepath=str(MODEL_PATHS.base / "checkpoint" / "best_model"),
             monitor='val_loss',
             save_best_only=True,
             save_weights_only=False,
@@ -299,6 +262,120 @@ def get_callbacks() -> list:
     ]
 
     return callbacks
+
+
+def launch_model_training(
+    model: Model,
+    train_dataset: Dataset,
+    val_dataset: Dataset
+) -> Model:
+    """
+    Launches the model training process using the configured datasets and callbacks.
+
+    Args:
+        model (Model): The compiled TensorFlow Keras model to be trained.
+        train_dataset (tf.data.Dataset): Dataset used for training.
+        val_dataset (tf.data.Dataset): Dataset used for validation during training.
+
+    Returns:
+        Model: The trained Keras model.
+    """
+    print("🚀 Start model training")
+    start_time = time.time()
+    history = model.fit(
+        train_dataset,
+        validation_data=val_dataset,
+        epochs=TRAINING_PARAMS.epochs,
+        callbacks=get_callbacks()
+    )
+    end_time = time.time()
+    training_time = end_time - start_time
+    print(f"Training finished! ({training_time/60:.1f} minutes)")
+
+    return model, history
+
+
+def training_summary(history: History, export_path: Optional[str] = None) -> None:
+    """
+    Displays a summary of training performance including final accuracy/loss,
+    overfitting analysis, best epoch evaluation, and optionally exports metrics.
+
+    Args:
+        history (History): Keras History object returned by model.fit().
+        export_path (Optional[str]): Path to export summary as JSON (optional).
+    """
+    print("📊 Training Summary\n")
+
+    history_data = history.history
+    required_keys = {'accuracy', 'val_accuracy', 'loss', 'val_loss'}
+    
+    if not required_keys.issubset(history_data.keys()):
+        raise ValueError(f"❌ Missing required keys in history: {required_keys - set(history_data.keys())}")
+
+    # Final metrics
+    final_train_accuracy = history_data['accuracy'][-1]
+    final_val_accuracy = history_data['val_accuracy'][-1]
+    final_train_loss = history_data['loss'][-1]
+    final_val_loss = history_data['val_loss'][-1]
+
+    print(f"🎯 Final performance:")
+    print(f"   📈 Training accuracy: {final_train_accuracy:.4f} ({final_train_accuracy * 100:.2f}%)")
+    print(f"   ✅ Validation accuracy: {final_val_accuracy:.4f} ({final_val_accuracy * 100:.2f}%)")
+    print(f"   📉 Training loss: {final_train_loss:.4f}")
+    print(f"   📊 Validation loss: {final_val_loss:.4f}")
+
+    # Overfitting analysis
+    overfitting_gap = final_train_accuracy - final_val_accuracy
+    print(f"\n🔍 Overfitting analysis:")
+    if overfitting_gap < 0.05:
+        print(f"   ✅ Well balanced (gap: {overfitting_gap:.4f})")
+    elif overfitting_gap < 0.10:
+        print(f"   ⚠️ Slight overfitting (gap: {overfitting_gap:.4f})")
+    else:
+        print(f"   🚨 Overfitting detected (gap: {overfitting_gap:.4f})")
+
+    # Best epoch by validation accuracy
+    best_epoch = history_data['val_accuracy'].index(max(history_data['val_accuracy'])) + 1
+    best_val_acc = max(history_data['val_accuracy'])
+
+    print(f"\n🏆 Best epoch:")
+    print(f"   📊 Epoch: {best_epoch}/{len(history_data['val_accuracy'])}")
+    print(f"   🎯 Validation accuracy: {best_val_acc:.4f} ({best_val_acc * 100:.2f}%)")
+
+    # Performance interpretation
+    if best_val_acc > 0.90:
+        print("   🌟 Excellent performance!")
+    elif best_val_acc > 0.85:
+        print("   👍 Very good performance!")
+    elif best_val_acc > 0.80:
+        print("   ✅ Good performance")
+    else:
+        print("   ⚠️ Needs improvement")
+
+    # Additional metrics
+    extra_metrics = {k: v[-1] for k, v in history_data.items() if k not in required_keys}
+    if extra_metrics:
+        print("\n📈 Additional metrics:")
+        for name, value in extra_metrics.items():
+            print(f"   • {name}: {value:.4f}")
+
+    # Optional export
+    if export_path:
+        export_data = {
+            "final": {
+                "train_accuracy": final_train_accuracy,
+                "val_accuracy": final_val_accuracy,
+                "train_loss": final_train_loss,
+                "val_loss": final_val_loss,
+                "overfitting_gap": overfitting_gap,
+                "best_epoch": best_epoch,
+                "best_val_accuracy": best_val_acc
+            },
+            "additional_metrics": extra_metrics
+        }
+        with open(export_path, "w") as f:
+            json.dump(export_data, f, indent=2)
+        print(f"\n📁 Metrics exported to: {export_path}")
 
 
 def save_model_and_tokenizer(model: Model, tokenizer, save_path: Path = MODEL_PATHS.base) -> None:
@@ -345,7 +422,37 @@ def train_distilbert_model(
     model = compile_model(model, optimizer, loss_fn, metrics)
 
     # Start training.
-    model = launch_model_training(model, train_dataset, val_dataset)
+    model, history = launch_model_training(model, train_dataset, val_dataset)
+
+    # Print training statistics
+    training_summary(history)
 
     # Save model and tokenizer for prediction.
     save_model_and_tokenizer(model, tokenizer)
+
+
+def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[Model, DistilBertTokenizerFast]:
+    """
+    Loads a fine-tuned Keras model (SavedModel format) and its associated tokenizer.
+
+    Args:
+        model_path (Path): Path to the saved TensorFlow model directory (e.g., containing saved_model.pb).
+        tokenizer_path (Path): Path to the tokenizer directory (containing vocab.txt, tokenizer_config.json, etc.)
+
+    Returns:
+        Tuple[Model, DistilBertTokenizerFast]: The loaded model and tokenizer, ready for inference or evaluation.
+    """
+    if not model_path.exists():
+        raise FileNotFoundError(f"❌ Model path not found: {model_path}")
+    if not tokenizer_path.exists():
+        raise FileNotFoundError(f"❌ Tokenizer path not found: {tokenizer_path}")
+
+    print(f"📥 Loading model from: {model_path}")
+    model = load_model(model_path)
+    print("✅ Model loaded successfully.")
+
+    print(f"📥 Loading tokenizer from: {tokenizer_path}")
+    tokenizer = DistilBertTokenizerFast.from_pretrained(tokenizer_path)
+    print("✅ Tokenizer loaded successfully.")
+
+    return model, tokenizer

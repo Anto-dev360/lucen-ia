@@ -1,8 +1,14 @@
 """
 test.py
 
-Inference utilities for predicting sentiment on BTC-related tweets using a trained DistilBERT model.
-Includes batch prediction from a CSV file for post-training evaluation.
+Evaluation utilities for a fine-tuned DistilBERT model on a binary sentiment classification task.
+This script runs model evaluation on the test split from the original dataset and saves metrics and visualizations.
+
+Includes:
+- Classification report
+- ROC AUC, F1, precision, recall, accuracy
+- Confusion matrix and ROC curve visualizations
+- JSON export of performance metrics
 
 Author: Anthony Morin
 Created: 2025-07-01
@@ -10,56 +16,117 @@ Project: lucen_ai
 License: MIT
 """
 
-import pandas as pd
+import json
+from typing import List
+from pathlib import Path
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    classification_report,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix,
+    roc_curve
+)
 import tensorflow as tf
-from config.settings import DATA_PATHS, MODEL_PATHS, TRAINING_PARAMS
-from transformers import DistilBertTokenizerFast
+import numpy as np
+from transformers import PreTrainedTokenizerBase
+from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS
 
-from lucenai.training.tokenizer import encode_single_text
 
-
-def load_model_and_tokenizer(model_path=None, tokenizer_name=None):
+def evaluate_model_on_test_set(
+    model: tf.keras.Model,
+    tokenizer: PreTrainedTokenizerBase,
+    test_texts: List[str],
+    test_labels: List[int],
+    max_len: int = TRAINING_PARAMS.max_len
+) -> None:
     """
-    Loads the trained TensorFlow model and corresponding tokenizer.
+    Evaluates a trained model on the test set and saves metrics and plots to disk.
 
     Args:
-        model_path (str): Path to the saved Keras model.
-        tokenizer_name (str): Name of the pretrained tokenizer.
-
-    Returns:
-        tuple: (model, tokenizer)
+        model (tf.keras.Model): Trained model.
+        tokenizer (PreTrainedTokenizer): Tokenizer used to preprocess text.
+        test_texts (List[str]): Input texts.
+        test_labels (List[int]): Corresponding binary labels.
+        max_len (int): Maximum sequence length (default: 128).
     """
-    model_path = model_path or MODEL_PATHS.base
-    tokenizer_name = tokenizer_name or TRAINING_PARAMS.model_name
+    print("🧪 Evaluating model on test set...\n")
 
-    model = tf.keras.models.load_model(model_path)
-    tokenizer = DistilBertTokenizerFast.from_pretrained(tokenizer_name)
-    return model, tokenizer
+    # Tokenize
+    encodings = tokenizer(
+        test_texts,
+        padding='max_length',
+        truncation=True,
+        max_length=max_len,
+        return_tensors='tf'
+    )
 
+    dataset = tf.data.Dataset.from_tensor_slices((
+        dict(encodings),
+        tf.convert_to_tensor(test_labels)
+    )).batch(32)
 
-def predict_on_csv():
-    """
-    Loads a CSV file containing BTC-related tweets, runs sentiment prediction on each,
-    and prints the result for a small sample.
+    # Predict
+    y_probs = model.predict(dataset).squeeze()
+    y_preds = (y_probs > 0.5).astype(int)
 
-    The path to the CSV file is defined in `config/settings.py` (TEST_PREDICTION_CSV).
-    The CSV must contain a 'text' column.
+    # Metrics
+    accuracy = accuracy_score(test_labels, y_preds)
+    precision = precision_score(test_labels, y_preds)
+    recall = recall_score(test_labels, y_preds)
+    f1 = f1_score(test_labels, y_preds)
+    auc = roc_auc_score(test_labels, y_probs)
+    report = classification_report(test_labels, y_preds, digits=4, output_dict=True)
 
-    This function is meant to be called post-training to verify model behavior.
-    """
-    print(f"📄 Loading test data from {DATA_PATHS.sample_prediction_csv}")
-    df = pd.read_csv(DATA_PATHS.sample_prediction_csv)
+    print("📊 Test Performance:")
+    print(f"   ✅ Accuracy : {accuracy:.4f}")
+    print(f"   🎯 Precision: {precision:.4f}")
+    print(f"   🔁 Recall   : {recall:.4f}")
+    print(f"   🧠 F1 Score : {f1:.4f}")
+    print(f"   🧬 ROC AUC  : {auc:.4f}")
 
-    if "text" not in df.columns:
-        raise ValueError("CSV file must contain a 'text' column.")
+    output_dir = MODEL_PATHS.best_model
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    model, tokenizer = load_model_and_tokenizer()
+    # Save JSON report
+    with open(output_dir / "test_report.json", "w") as f:
+        json.dump({
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1,
+            "roc_auc": auc,
+            "classification_report": report
+        }, f, indent=4)
 
-    print("🔍 Running predictions on sample tweets...\n")
-    sample = df["text"].dropna().head(5)
+    print(f"\n💾 Report saved: {output_dir / 'test_report.json'}")
 
-    for text in sample:
-        encoded = encode_single_text(text, tokenizer)
-        prediction = model.predict(encoded, verbose=0)[0][0]
-        label = "Positive" if prediction > 0.5 else "Negative"
-        print(f"📝 Tweet: {text[:80]}...\n➡️ Prediction: {label} ({prediction:.2f})\n")
+    # Plot confusion matrix
+    cm = confusion_matrix(test_labels, y_preds)
+    fig, ax = plt.subplots()
+    ax.matshow(cm, cmap='Blues')
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, str(cm[i, j]), ha='center', va='center', fontsize=12)
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
+    plt.tight_layout()
+    plt.savefig(output_dir / "confusion_matrix.png")
+    print(f"🖼️ Confusion matrix saved: {output_dir / 'confusion_matrix.png'}")
+
+    # Plot ROC curve
+    fpr, tpr, _ = roc_curve(test_labels, y_probs)
+    plt.figure()
+    plt.plot(fpr, tpr, label=f"AUC = {auc:.4f}")
+    plt.plot([0, 1], [0, 1], "k--")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve")
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(output_dir / "roc_curve.png")
+    print(f"🖼️ ROC curve saved: {output_dir / 'roc_curve.png'}")
