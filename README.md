@@ -57,8 +57,7 @@ lucen-ai/
 ├── README.md                          # 📖 Project overview and instructions
 ├── Docker.train                       # Dockerfile for training environment
 ├── Docker.api                         # Dockerfile for API environment
-├── requirements_CPU.txt               # Minimal dependencies
-├── requirements_GPU.txt               # Dev dependencies for GPU runs
+├── requirements.txt                   # Dependencies
 ├── .gitignore
 └── LICENSE
 ```
@@ -212,7 +211,7 @@ This command will:
 - Saves the trained model (`model.keras`), configuration (`config.json`), and tokenizer files to: `lucenai/models/distilbert_sentiment/`
 
 
-### 🌐 3. Serve the API (CPU)
+### 🌐 3. Serve the API
 
 ```bash
 docker run -p 8000:8000 lucen-api

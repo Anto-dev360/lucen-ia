@@ -29,19 +29,20 @@ except ImportError:
 
 from lucenai.config.settings import CALLBACK_CONFIG, MODEL_PATHS, TRAINING_PARAMS
 
-
 def create_sentiment_model(
     distilbert_model: TFDistilBertModel,
     dropout_rate: float = TRAINING_PARAMS.dropout_rate
 ) -> Tuple[tf.keras.Model, TFDistilBertModel]:
     """
-    Builds a Keras sentiment classification model using a pretrained DistilBERT backbone.
+    Builds a deeper sentiment classification model using a pretrained DistilBERT backbone.
 
     Architecture:
     1. Input layers for token IDs and attention masks
     2. DistilBERT base
     3. [CLS] token extraction
-    4. Dropout + Dense + Sigmoid for binary classification
+    4. Dense(256) + ReLU + Dropout
+    5. Dense(64) + ReLU + Dropout
+    6. Dense(1) + Sigmoid output for binary classification
 
     Args:
         distilbert_model (TFDistilBertModel): A pretrained DistilBERT model.
@@ -52,20 +53,14 @@ def create_sentiment_model(
             - model (tf.keras.Model): Fully assembled Keras model.
             - distilbert_model (TFDistilBertModel): The base transformer model.
     """
-    print("🏗️ Building full architecture...")
+    print("🏗️ Building deep architecture...")
 
-    input_ids = tf.keras.layers.Input(
-        shape=(TRAINING_PARAMS.max_len,),
-        dtype=tf.int32,
-        name='input_ids'
-    )
-    attention_mask = tf.keras.layers.Input(
-        shape=(TRAINING_PARAMS.max_len,),
-        dtype=tf.int32,
-        name='attention_mask'
-    )
+    # Input layers
+    input_ids = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='input_ids')
+    attention_mask = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='attention_mask')
     print("   ✅ Input layers created")
 
+    # DistilBERT encoder
     distilbert_output = distilbert_model(
         input_ids=input_ids,
         attention_mask=attention_mask
@@ -73,22 +68,25 @@ def create_sentiment_model(
     sequence_output = distilbert_output.last_hidden_state
     print("   ✅ DistilBERT integrated")
 
+    # Use [CLS] token
     cls_token = sequence_output[:, 0, :]
     print("   ✅ [CLS] token extracted")
 
-    dropout_output = tf.keras.layers.Dropout(dropout_rate, name='dropout')(cls_token)
-    print(f"   ✅ Dropout applied (rate={dropout_rate})")
+    # Classification head
+    # First dense layer to reduce dimensionality and add non-linearity
+    x = tf.keras.layers.Dense(128, activation='relu', name='dense_128')(cls_token)
+    # Dropout to prevent overfitting after the first dense layer
+    x = tf.keras.layers.Dropout(dropout_rate, name='dropout_1')(x)
+    # Second dense layer to further refine representation
+    x = tf.keras.layers.Dense(64, activation='relu', name='dense_64')(x)
+    # Additional dropout for regularization
+    x = tf.keras.layers.Dropout(dropout_rate, name='dropout_2')(x)
 
-    dense_projection = tf.keras.layers.Dense(
-        256, activation='relu', name='projection'
-    )(dropout_output)
-    print("   ✅ Dense projection layer added")
+    # Final classification layer with sigmoid for binary output
+    predictions = tf.keras.layers.Dense(1, activation='sigmoid', name='classifier')(x)
+    print("   ✅ Deep classification head added")
 
-    predictions = tf.keras.layers.Dense(
-        1, activation='sigmoid', name='classifier'
-    )(dense_projection)
-    print("   ✅ Classification layer added")
-
+    # Final model
     model = tf.keras.Model(
         inputs={"input_ids": input_ids, "attention_mask": attention_mask},
         outputs=predictions,
@@ -378,25 +376,23 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
         print(f"\n📁 Metrics exported to: {export_path}")
 
 
-def save_model_and_tokenizer(model: Model, tokenizer, save_path: Path = MODEL_PATHS.base) -> None:
-    """
-    Saves the trained model and tokenizer to disk.
+def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path):
+    if not (model_path / "checkpoint" / "weights.h5").exists():
+        raise FileNotFoundError("No weights file found")
 
-    Args:
-        model (tf.keras.Model): Trained Keras model.
-        tokenizer: Hugging Face tokenizer used during training.
-        save_path (Path): Directory to save model and tokenizer (default: MODEL_PATHS.base)
-    """
-    print(f"💾 Saving model to: {save_path}")
-    MODEL_PATHS.ensure_dirs()
-    
-    # Save model
-    model.save(save_path)
-    print("✅ Model saved")
+    print(f"📥 Reloading model structure from code...")
+    distilbert_model = TFDistilBertModel.from_pretrained(TRAINING_PARAMS.model_name)
+    model, _ = create_sentiment_model(distilbert_model)
 
-    # Save tokenizer
-    tokenizer.save_pretrained(MODEL_PATHS.tokenizer)
-    print(f"✅ Tokenizer saved to: {MODEL_PATHS.tokenizer}")
+    print("📥 Loading weights...")
+    model.load_weights(model_path / "checkpoint" / "weights.h5")
+    print("✅ Weights loaded")
+
+    print("📥 Loading tokenizer...")
+    tokenizer = DistilBertTokenizerFast.from_pretrained(tokenizer_path)
+    print("✅ Tokenizer loaded")
+
+    return model, tokenizer
 
 
 def train_distilbert_model(
@@ -431,28 +427,63 @@ def train_distilbert_model(
     save_model_and_tokenizer(model, tokenizer)
 
 
-def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[Model, DistilBertTokenizerFast]:
+def save_model_and_tokenizer(model, tokenizer, save_path: Path = MODEL_PATHS.base):
     """
-    Loads a fine-tuned Keras model (SavedModel format) and its associated tokenizer.
+    Saves the trained model weights (TensorFlow format) and tokenizer for later reuse.
 
     Args:
-        model_path (Path): Path to the saved TensorFlow model directory (e.g., containing saved_model.pb).
-        tokenizer_path (Path): Path to the tokenizer directory (containing vocab.txt, tokenizer_config.json, etc.)
+        model (tf.keras.Model): The trained Keras model whose weights are to be saved.
+        tokenizer (PreTrainedTokenizerFast): The tokenizer used during training.
+        save_path (Path): Base directory to save weights and tokenizer.
+    """
+    print(f"💾 Saving model weights to: {save_path}")
+    MODEL_PATHS.ensure_dirs()
+
+    # ✅ Save weights using the TF format (Recommended)
+    model.save_weights(str(save_path / "checkpoint" / "weights"), save_format="tf")
+    print("✅ Weights saved (TensorFlow format)")
+
+    # ✅ Save tokenizer
+    tokenizer.save_pretrained(MODEL_PATHS.tokenizer)
+    print(f"✅ Tokenizer saved to: {MODEL_PATHS.tokenizer}")
+
+
+def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[Model, DistilBertTokenizerFast]:
+    """
+    Reconstructs the DistilBERT sentiment classification model and loads saved weights and tokenizer.
+
+    This function:
+    - Rebuilds the model architecture from scratch using the same pretrained base (DistilBERT).
+    - Loads trained weights from disk (TensorFlow checkpoint format recommended).
+    - Reloads the tokenizer from a Hugging Face-compatible directory.
+
+    Args:
+        model_path (Path): Path to the model weights directory or checkpoint file.
+                           Example: /models/distilbert_sentiment/checkpoint/weights
+        tokenizer_path (Path): Path to tokenizer folder containing files such as
+                               vocab.txt, tokenizer_config.json, etc.
 
     Returns:
-        Tuple[Model, DistilBertTokenizerFast]: The loaded model and tokenizer, ready for inference or evaluation.
+        Tuple[Model, DistilBertTokenizerFast]: 
+            - Fully loaded Keras model ready for inference.
+            - Associated DistilBERT tokenizer.
     """
     if not model_path.exists():
         raise FileNotFoundError(f"❌ Model path not found: {model_path}")
     if not tokenizer_path.exists():
         raise FileNotFoundError(f"❌ Tokenizer path not found: {tokenizer_path}")
 
-    print(f"📥 Loading model from: {model_path}")
-    model = load_model(model_path)
-    print("✅ Model loaded successfully.")
-
     print(f"📥 Loading tokenizer from: {tokenizer_path}")
     tokenizer = DistilBertTokenizerFast.from_pretrained(tokenizer_path)
     print("✅ Tokenizer loaded successfully.")
+
+    print("🧠 Rebuilding model architecture...")
+    base_model = TFAutoModel.from_pretrained(TRAINING_PARAMS.model_name)
+    model, _ = create_sentiment_model(base_model)
+
+    print(f"📦 Loading model weights from: {model_path}")
+    status = model.load_weights(str(model_path))
+    status.expect_partial() 
+    print("✅ Weights loaded successfully.")
 
     return model, tokenizer

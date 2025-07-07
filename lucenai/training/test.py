@@ -64,9 +64,15 @@ def evaluate_model_on_test_set(
         return_tensors='tf'
     )
 
+    input_ids = tf.cast(encodings["input_ids"], dtype=tf.int32)
+    attention_mask = tf.cast(encodings["attention_mask"], dtype=tf.int32)
+
     dataset = tf.data.Dataset.from_tensor_slices((
-        dict(encodings),
-        tf.convert_to_tensor(test_labels)
+        {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        },
+        tf.convert_to_tensor(test_labels, dtype=tf.int32)
     )).batch(32)
 
     # Predict

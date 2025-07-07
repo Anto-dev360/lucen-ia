@@ -58,7 +58,7 @@ def get_tokenizer_and_dataset(
                 "input_ids": encodings["input_ids"],
                 "attention_mask": encodings["attention_mask"]
             },
-            tf.convert_to_tensor(labels, dtype=tf.int32)
+            labels
         ))
 
         return dataset.shuffle(1000).batch(TRAINING_PARAMS.batch_size).prefetch(tf.data.AUTOTUNE)

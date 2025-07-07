@@ -52,11 +52,11 @@ MODEL_PATHS = ModelPaths()
 class TrainingParams:
     model_name: str = "distilbert-base-uncased"
     batch_size: int = 32
-    epochs: int = 5
-    max_len: int = 256
+    epochs: int = 10
+    max_len: int = 64
     learning_rate: float = 2e-5
     seed: int = 42
-    dropout_rate: float = 0.3
+    dropout_rate: float = 0.4
 
 TRAINING_PARAMS = TrainingParams()
 
@@ -65,10 +65,10 @@ TRAINING_PARAMS = TrainingParams()
 
 @dataclass
 class CallbackConfig:
-    early_stopping_patience: int = 3
-    lr_reduce_patience: int = 2
+    early_stopping_patience: int = 2
+    lr_reduce_patience: int = 3
     lr_reduce_factor: float = 0.5
-    min_lr: float = 1e-7
+    min_lr: float = 1e-6
 
 CALLBACK_CONFIG = CallbackConfig()
 

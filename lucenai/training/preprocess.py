@@ -13,9 +13,12 @@ License: MIT
 
 import re
 from typing import Tuple, Union
+import random
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import nltk
+from nltk.corpus import wordnet
 
 from lucenai.config.settings import DATA_PATHS, TRAINING_PARAMS
 
@@ -45,6 +48,7 @@ def load_and_preprocess_dataset(return_test: bool = False):
     df = remove_duplicates(df)
     df = remove_empty_texts(df)
     df = format_dataframe(df)
+    df = augment_dataset(df, fraction=0.2)
     df = balance_classes(df)
 
     split_result = split_dataset(
@@ -222,3 +226,75 @@ def split_dataset(
             random_state=TRAINING_PARAMS.seed
         )
         return train_df, val_df
+
+
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+
+def get_synonyms(word: str) -> list:
+    """
+    Returns a list of synonyms for a given word using WordNet.
+    """
+    synonyms = set()
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            if lemma.name().lower() != word.lower():
+                synonyms.add(lemma.name().replace('_', ' '))
+    return list(synonyms)
+
+def augment_text(text: str, num_changes: int = 2) -> str:
+    """
+    Randomly replaces words with synonyms to augment the input text.
+
+    Args:
+        text (str): Original cleaned text.
+        num_changes (int): Number of words to attempt replacing.
+
+    Returns:
+        str: Augmented text.
+    """
+    words = text.split()
+    if len(words) < 3:
+        return text  # Avoid changing very short texts
+
+    indices = list(range(len(words)))
+    random.shuffle(indices)
+
+    changes = 0
+    for idx in indices:
+        word = words[idx]
+        synonyms = get_synonyms(word)
+        if synonyms:
+            words[idx] = random.choice(synonyms)
+            changes += 1
+        if changes >= num_changes:
+            break
+
+    return " ".join(words)
+
+def augment_dataset(df: pd.DataFrame, fraction: float = 0.2) -> pd.DataFrame:
+    """
+    Augments the dataset by generating paraphrased versions of a subset of rows.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame after cleaning but before balancing.
+        fraction (float): Fraction of samples to augment (e.g., 0.2 = 20%).
+
+    Returns:
+        pd.DataFrame: Augmented DataFrame with additional rows.
+    """
+    n_samples = int(len(df) * fraction)
+    sampled_df = df.sample(n=n_samples, random_state=TRAINING_PARAMS.seed)
+
+    augmented_rows = []
+    for _, row in sampled_df.iterrows():
+        augmented_text = augment_text(row["clean_text"])
+        augmented_rows.append({
+            "tweet": row["tweet"],
+            "clean_text": augmented_text,
+            "label": row["label"]
+        })
+
+    augmented_df = pd.DataFrame(augmented_rows)
+    print(f"🧪 Data augmentation: added {len(augmented_df)} synthetic samples.")
+    return pd.concat([df, augmented_df], ignore_index=True)
