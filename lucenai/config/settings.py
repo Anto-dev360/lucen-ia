@@ -61,6 +61,21 @@ class TrainingParams:
 TRAINING_PARAMS = TrainingParams()
 
 
+# === ⚙️ DISTILLATION PARAMETERS ===
+
+@dataclass
+class DistillationParams:
+    temperature: float = 2.0    # Temperature for soft target smoothing.
+    alpha: float = 0.7          # Weight between distillation and ground truth loss.
+    learning_rate: float = 1e-4 # Optimizer learning rate.
+    vocab_size: int = 30522     # Vocabulary size (e.g., from tokenizer).
+    embedding_dim: int = 64     # Dimension of token embeddings.
+    dropout_rate: float = 0.3   # Dropout rate.
+    epochs: int = 5
+
+DISTILATION_PARAMS = DistillationParams()
+
+
 # === 🧪 CALLBACK SETTINGS ===
 
 @dataclass

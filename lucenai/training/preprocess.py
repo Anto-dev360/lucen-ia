@@ -242,6 +242,7 @@ def get_synonyms(word: str) -> list:
                 synonyms.add(lemma.name().replace('_', ' '))
     return list(synonyms)
 
+
 def augment_text(text: str, num_changes: int = 2) -> str:
     """
     Randomly replaces words with synonyms to augment the input text.
@@ -271,6 +272,7 @@ def augment_text(text: str, num_changes: int = 2) -> str:
             break
 
     return " ".join(words)
+
 
 def augment_dataset(df: pd.DataFrame, fraction: float = 0.2) -> pd.DataFrame:
     """

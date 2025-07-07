@@ -1,5 +1,5 @@
 """
-test.py
+evaluation.py
 
 Evaluation utilities for a fine-tuned DistilBERT model on a binary sentiment classification task.
 This script runs model evaluation on the test split from the original dataset and saves metrics and visualizations.
@@ -41,7 +41,8 @@ def evaluate_model_on_test_set(
     tokenizer: PreTrainedTokenizerBase,
     test_texts: List[str],
     test_labels: List[int],
-    max_len: int = TRAINING_PARAMS.max_len
+    max_len: int = TRAINING_PARAMS.max_len,
+    output_dir = MODEL_PATHS.best_model
 ) -> None:
     """
     Evaluates a trained model on the test set and saves metrics and plots to disk.
@@ -51,7 +52,7 @@ def evaluate_model_on_test_set(
         tokenizer (PreTrainedTokenizer): Tokenizer used to preprocess text.
         test_texts (List[str]): Input texts.
         test_labels (List[int]): Corresponding binary labels.
-        max_len (int): Maximum sequence length (default: 128).
+        max_len (int): Maximum sequence length (default: 64).
     """
     print("🧪 Evaluating model on test set...\n")
 
@@ -94,7 +95,6 @@ def evaluate_model_on_test_set(
     print(f"   🧠 F1 Score : {f1:.4f}")
     print(f"   🧬 ROC AUC  : {auc:.4f}")
 
-    output_dir = MODEL_PATHS.best_model
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Save JSON report

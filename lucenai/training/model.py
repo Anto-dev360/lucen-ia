@@ -40,7 +40,7 @@ def create_sentiment_model(
     1. Input layers for token IDs and attention masks
     2. DistilBERT base
     3. [CLS] token extraction
-    4. Dense(256) + ReLU + Dropout
+    4. Dense(128) + ReLU + Dropout
     5. Dense(64) + ReLU + Dropout
     6. Dense(1) + Sigmoid output for binary classification
 
@@ -55,12 +55,12 @@ def create_sentiment_model(
     """
     print("🏗️ Building deep architecture...")
 
-    # Input layers
+    # Input layers: token IDs and attention mask
     input_ids = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='input_ids')
     attention_mask = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='attention_mask')
     print("   ✅ Input layers created")
 
-    # DistilBERT encoder
+    # DistilBERT pretrained extraction from Hugging Face
     distilbert_output = distilbert_model(
         input_ids=input_ids,
         attention_mask=attention_mask
@@ -68,7 +68,7 @@ def create_sentiment_model(
     sequence_output = distilbert_output.last_hidden_state
     print("   ✅ DistilBERT integrated")
 
-    # Use [CLS] token
+    # Pooling: extract [CLS] token
     cls_token = sequence_output[:, 0, :]
     print("   ✅ [CLS] token extracted")
 
@@ -151,8 +151,8 @@ def define_hyperparameters(use_extended_metrics: bool = False) -> Tuple[
     # Optimizer for fine-tuning
     optimizer = tf.keras.optimizers.Adam(
         learning_rate=TRAINING_PARAMS.learning_rate,
-        epsilon=1e-8,
-        clipnorm=1.0
+        epsilon=1e-8,   # Numeric stability
+        clipnorm=1.0    # Gradient clipping
     )
 
     # Binary classification loss
@@ -288,7 +288,7 @@ def launch_model_training(
     )
     end_time = time.time()
     training_time = end_time - start_time
-    print(f"Training finished! ({training_time/60:.1f} minutes)")
+    print(f"✅ Training finished! ({training_time/60:.1f} minutes)")
 
     return model, history
 
@@ -376,25 +376,6 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
         print(f"\n📁 Metrics exported to: {export_path}")
 
 
-def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path):
-    if not (model_path / "checkpoint" / "weights.h5").exists():
-        raise FileNotFoundError("No weights file found")
-
-    print(f"📥 Reloading model structure from code...")
-    distilbert_model = TFDistilBertModel.from_pretrained(TRAINING_PARAMS.model_name)
-    model, _ = create_sentiment_model(distilbert_model)
-
-    print("📥 Loading weights...")
-    model.load_weights(model_path / "checkpoint" / "weights.h5")
-    print("✅ Weights loaded")
-
-    print("📥 Loading tokenizer...")
-    tokenizer = DistilBertTokenizerFast.from_pretrained(tokenizer_path)
-    print("✅ Tokenizer loaded")
-
-    return model, tokenizer
-
-
 def train_distilbert_model(
     train_dataset: Dataset,
     val_dataset: Dataset,
@@ -444,8 +425,8 @@ def save_model_and_tokenizer(model, tokenizer, save_path: Path = MODEL_PATHS.bas
     print("✅ Weights saved (TensorFlow format)")
 
     # ✅ Save tokenizer
-    tokenizer.save_pretrained(MODEL_PATHS.tokenizer)
-    print(f"✅ Tokenizer saved to: {MODEL_PATHS.tokenizer}")
+    tokenizer.save_pretrained(str(save_path / "tokenizer"))
+    print(f"✅ Tokenizer saved to: {str(save_path / 'tokenizer')}")
 
 
 def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[Model, DistilBertTokenizerFast]:

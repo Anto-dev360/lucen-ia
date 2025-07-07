@@ -22,24 +22,35 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from lucenai.training.preprocess import load_and_preprocess_dataset
-from lucenai.training.tokenizer import get_tokenizer_and_dataset
+from lucenai.training.tokenizer import get_tokenizer_and_dataset, adapt_tokenizer_for_student
 from lucenai.training.model import train_distilbert_model, load_best_model_and_tokenizer
-from lucenai.training.test import evaluate_model_on_test_set
+from lucenai.training.evaluation import evaluate_model_on_test_set
 from lucenai.training.utils import configure_environment_for_nlp
+from lucenai.training.distillation import DistillationModel, train_evaluate_student_model
 from lucenai.config.settings import MODEL_PATHS
 
 def parse_args():
     """
-    Parses command-line arguments.
+    Parses command-line arguments for model training and distillation.
 
     Returns:
-        argparse.Namespace: Parsed arguments including --force flag.
+        argparse.Namespace: Parsed arguments including:
+            - --force (-f): Forces retraining even if a model already exists.
+            - --distill (-d): Enables knowledge distillation using a lightweight student model.
+                              Requires that a teacher model is already trained or that --force
+                              is used to (re)train it before distillation.
     """
     parser = argparse.ArgumentParser(description="Train DistilBERT for sentiment classification.")
     parser.add_argument(
         "-f", "--force",
         action="store_true",
         help="Force retraining even if a model already exists."
+    )
+    parser.add_argument(
+        "-d", "--distill",
+        action="store_true",
+        help="Use knowledge distillation to train a lightweight student model. "
+             "Requires a pretrained teacher model (use --force if needed)."
     )
     return parser.parse_args()
 
@@ -71,15 +82,21 @@ def main() -> None:
         print(f"⚠️ Found existing model at: {MODEL_PATHS.best_model}")
         print("⏩ Skipping training. Use --force to retrain.\n")
 
-        # Only load test set
+        # Load all splits (tokenization of train/val required if distillation is needed)
         (
-            _, _,
-            _, _,
+            raw_train_texts, raw_train_labels,
+            raw_val_texts, raw_val_labels,
             raw_test_texts, raw_test_labels
         ) = load_and_preprocess_dataset(return_test=True)
 
-    # Training required
+        if args.distill:
+            # Tokenize train and val sets (needed for student model)
+            tokenizer, train_dataset, val_dataset = get_tokenizer_and_dataset(
+                raw_train_texts, raw_train_labels,
+                raw_val_texts, raw_val_labels
+            )
     else:
+        # Full Training required
         (
             raw_train_texts, raw_train_labels,
             raw_val_texts, raw_val_labels,
@@ -106,8 +123,30 @@ def main() -> None:
         tokenizer_path=MODEL_PATHS.tokenizer
     )
 
-    # Final test evaluation
+    # Final test evaluation of fine tuned model
     evaluate_model_on_test_set(best_model, tokenizer, raw_test_texts, raw_test_labels)
+
+    # Launch distillation if requested
+    if args.distill:
+        if 'train_dataset' not in locals():
+            print("⚠️ Distillation requires access to the training dataset.")
+            print("⛔ Please rerun with --force to enable retraining and provide training data.")
+            return
+
+        print("\n🔥 Starting distillation pipeline...")
+        print("📦 Tokenize data for student...")
+        student_train_dataset = adapt_tokenizer_for_student(tokenizer, raw_train_texts, raw_train_labels)
+        student_val_dataset = adapt_tokenizer_for_student(tokenizer, raw_val_texts, raw_val_labels)
+        # Train student model
+        train_evaluate_student_model(
+            teacher_model=best_model,
+            train_dataset=student_train_dataset,
+            val_dataset=student_val_dataset,
+            tokenizer=tokenizer,
+            test_texts=raw_test_texts,
+            test_labels=raw_test_labels,
+            export_dir=MODEL_PATHS.base / "student_model",
+        )
 
 
 if __name__ == "__main__":

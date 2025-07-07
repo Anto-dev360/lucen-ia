@@ -94,3 +94,37 @@ def encode_single_text(text: str, tokenizer: DistilBertTokenizerFast) -> Dict[st
         "input_ids": tf.convert_to_tensor(encoded["input_ids"]),
         "attention_mask": tf.convert_to_tensor(encoded["attention_mask"])
     }
+
+
+def adapt_tokenizer_for_student(tokenizer, texts, labels):
+    """
+    Tokenizes texts for the lightweight student model by only retaining input_ids.
+    
+    Args:
+        tokenizer (PreTrainedTokenizerFast): HuggingFace tokenizer (e.g., DistilBERTTokenizerFast).
+        texts (List[str]): List of input text strings.
+        labels (List[int]): Corresponding binary labels.
+        max_len (int): Maximum token sequence length.
+        batch_size (int): Batch size for tf.data.Dataset.
+    
+    Returns:
+        tf.data.Dataset: Batched tf.data.Dataset with {"input_ids"} and labels.
+    """
+    # Tokenize only input_ids
+    encodings = tokenizer(
+        texts,
+        truncation=True,
+        padding="max_length",
+        max_length=TRAINING_PARAMS.max_len,
+        return_tensors="tf"
+    )
+
+    dataset = tf.data.Dataset.from_tensor_slices((
+        {
+            "input_ids": encodings["input_ids"],
+            "attention_mask": encodings["attention_mask"],
+        },
+        tf.convert_to_tensor(labels, dtype=tf.float32)
+    ))
+    
+    return dataset.batch(batch_size=TRAINING_PARAMS.batch_size)
