@@ -37,11 +37,25 @@ DATA_PATHS = DataPaths()
 @dataclass
 class ModelPaths:
     base: Path = BASE_DIR / "lucenai" / "models" / "distilbert_sentiment"
-    best_model: Path = base / "checkpoint" / "best_model" 
-    tokenizer: Path = base / "tokenizer"
+
+    # Best fine-tuned model
+    best_root: Path = base
+    best_weights: Path = base / "checkpoint" / "best_model"
+    best_tokenizer: Path = base / "tokenizer"
+    best_logs: Path = base / "logs" / "teacher"
+
+    # Student (distilled)
+    student_root: Path = base / "student_model"
+    student_weights: Path = student_root / "checkpoint" / "weights"
+    student_tokenizer: Path = student_root / "tokenizer"
+    student_logs: Path = base / "logs" / "student"
 
     def ensure_dirs(self):
+        """Create all required directory trees."""
         self.base.mkdir(parents=True, exist_ok=True)
+        self.best_logs.mkdir(parents=True, exist_ok=True)
+        self.student_root.mkdir(parents=True, exist_ok=True)
+        self.student_logs.mkdir(parents=True, exist_ok=True)
 
 MODEL_PATHS = ModelPaths()
 
@@ -65,8 +79,8 @@ TRAINING_PARAMS = TrainingParams()
 
 @dataclass
 class DistillationParams:
-    temperature: float = 2.0    # Temperature for soft target smoothing.
-    alpha: float = 0.7          # Weight between distillation and ground truth loss.
+    temperature: float = 1.0    # Temperature for soft target smoothing.
+    alpha: float = 0.3          # Weight between distillation and ground truth loss.
     learning_rate: float = 1e-4 # Optimizer learning rate.
     vocab_size: int = 30522     # Vocabulary size (e.g., from tokenizer).
     embedding_dim: int = 64     # Dimension of token embeddings.

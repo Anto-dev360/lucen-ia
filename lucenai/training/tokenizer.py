@@ -10,10 +10,10 @@ Project: lucen_ai
 License: MIT
 """
 
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import tensorflow as tf
-from transformers import DistilBertTokenizerFast, BatchEncoding
+from transformers import BatchEncoding, DistilBertTokenizerFast
 
 from lucenai.config.settings import TRAINING_PARAMS
 

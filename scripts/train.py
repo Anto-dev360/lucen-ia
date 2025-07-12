@@ -10,10 +10,9 @@ Project: lucen_ai
 License: MIT
 """
 
+import argparse
 import os
 import sys
-import argparse
-from pathlib import Path
 
 # Reduce TensorFlow log level to warn
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -21,13 +20,14 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # import lucenai as a Python package
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from lucenai.training.preprocess import load_and_preprocess_dataset
-from lucenai.training.tokenizer import get_tokenizer_and_dataset, adapt_tokenizer_for_student
-from lucenai.training.model import train_distilbert_model, load_best_model_and_tokenizer
-from lucenai.training.evaluation import evaluate_model_on_test_set
-from lucenai.training.utils import configure_environment_for_nlp
-from lucenai.training.distillation import DistillationModel, train_evaluate_student_model
 from lucenai.config.settings import MODEL_PATHS
+from lucenai.training.distillation import train_evaluate_student_model
+from lucenai.training.evaluation import evaluate_model_on_test_set
+from lucenai.training.model import load_best_model_and_tokenizer, train_distilbert_model
+from lucenai.training.preprocess import load_and_preprocess_dataset
+from lucenai.training.tokenizer import adapt_tokenizer_for_student, get_tokenizer_and_dataset
+from lucenai.training.utils import configure_environment_for_nlp
+
 
 def parse_args():
     """
@@ -57,7 +57,8 @@ def parse_args():
 
 def main() -> None:
     """
-    Executes the full training and evaluation pipeline for binary sentiment classification using DistilBERT.
+    Executes the full training and evaluation pipeline for binary
+    sentiment classification using DistilBERT.
 
     Workflow:
     1. Configure environment (GPU, logging, seeds).
@@ -78,8 +79,8 @@ def main() -> None:
     configure_environment_for_nlp()
 
     # Model already exists and --force is not used
-    if MODEL_PATHS.best_model.exists() and not args.force:
-        print(f"⚠️ Found existing model at: {MODEL_PATHS.best_model}")
+    if MODEL_PATHS.best_weights.exists() and not args.force:
+        print(f"⚠️ Found existing model at: {MODEL_PATHS.best_root}")
         print("⏩ Skipping training. Use --force to retrain.\n")
 
         # Load all splits (tokenization of train/val required if distillation is needed)
@@ -119,12 +120,12 @@ def main() -> None:
 
     # Load model and tokenizer
     best_model, tokenizer = load_best_model_and_tokenizer(
-        model_path=MODEL_PATHS.best_model,
-        tokenizer_path=MODEL_PATHS.tokenizer
+        model_path=MODEL_PATHS.best_weights,
+        tokenizer_path=MODEL_PATHS.best_tokenizer
     )
 
     # Final test evaluation of fine tuned model
-    evaluate_model_on_test_set(best_model, tokenizer, raw_test_texts, raw_test_labels)
+    evaluate_model_on_test_set(best_model, tokenizer, raw_test_texts, raw_test_labels, output_dir=MODEL_PATHS.best_root)
 
     # Launch distillation if requested
     if args.distill:
@@ -135,8 +136,16 @@ def main() -> None:
 
         print("\n🔥 Starting distillation pipeline...")
         print("📦 Tokenize data for student...")
-        student_train_dataset = adapt_tokenizer_for_student(tokenizer, raw_train_texts, raw_train_labels)
-        student_val_dataset = adapt_tokenizer_for_student(tokenizer, raw_val_texts, raw_val_labels)
+        student_train_dataset = adapt_tokenizer_for_student(
+            tokenizer,
+            raw_train_texts,
+            raw_train_labels
+        )
+        student_val_dataset = adapt_tokenizer_for_student(
+            tokenizer,
+            raw_val_texts,
+            raw_val_labels
+        )
         # Train student model
         train_evaluate_student_model(
             teacher_model=best_model,
@@ -145,7 +154,6 @@ def main() -> None:
             tokenizer=tokenizer,
             test_texts=raw_test_texts,
             test_labels=raw_test_labels,
-            export_dir=MODEL_PATHS.base / "student_model",
         )
 
 

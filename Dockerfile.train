@@ -17,6 +17,9 @@ COPY ./requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
+# === 🗂️ Preload NLTK resources ===
+RUN python -m nltk.downloader wordnet omw-1.4
+
 # === 🧠 App code ===
 COPY ./lucenai /app/lucenai
 COPY ./scripts/train.py /app/scripts/train.py
@@ -25,8 +28,7 @@ COPY ./scripts/train.py /app/scripts/train.py
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
 ENV TF_CPP_MIN_LOG_LEVEL=2
 
-# Optional (only if we face libdevice issues)
-# ENV XLA_FLAGS=--xla_gpu_cuda_data_dir=/usr/local/cuda
-
 # === 🚀 Entry point ===
-CMD ["python", "scripts/train.py"]
+# CMD ["python", "scripts/train.py"]
+# Force fine-tuned model building and run distillation:
+CMD ["python", "scripts/train.py", "-d", "-f"]

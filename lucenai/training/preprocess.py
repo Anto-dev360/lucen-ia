@@ -11,14 +11,14 @@ Project: lucen_ai
 License: MIT
 """
 
+import random
 import re
 from typing import Tuple, Union
-import random
 
-import pandas as pd
-from sklearn.model_selection import train_test_split
 import nltk
+import pandas as pd
 from nltk.corpus import wordnet
+from sklearn.model_selection import train_test_split
 
 from lucenai.config.settings import DATA_PATHS, TRAINING_PARAMS
 

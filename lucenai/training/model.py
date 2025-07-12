@@ -10,16 +10,21 @@ Project: lucen_ai
 License: MIT
 """
 
-from pathlib import Path
 import json
-from typing import List, Tuple, Optional
 import time
+from pathlib import Path
+from typing import List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.data import Dataset
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, History
-from tensorflow.keras.models import Model, load_model
-from transformers import PreTrainedTokenizerFast, TFAutoModel, DistilBertTokenizerFast, TFDistilBertModel
+from tensorflow.keras.callbacks import EarlyStopping, History, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.models import Model
+from transformers import (
+    DistilBertTokenizerFast,
+    PreTrainedTokenizerFast,
+    TFAutoModel,
+    TFDistilBertModel,
+)
 
 try:
     from tensorflow_addons.metrics import F1Score
@@ -29,38 +34,52 @@ except ImportError:
 
 from lucenai.config.settings import CALLBACK_CONFIG, MODEL_PATHS, TRAINING_PARAMS
 
+
 def create_sentiment_model(
     distilbert_model: TFDistilBertModel,
     dropout_rate: float = TRAINING_PARAMS.dropout_rate
 ) -> Tuple[tf.keras.Model, TFDistilBertModel]:
     """
-    Builds a deeper sentiment classification model using a pretrained DistilBERT backbone.
+    Constructs a deep sentiment classification model using a pretrained DistilBERT backbone.
 
-    Architecture:
-    1. Input layers for token IDs and attention masks
-    2. DistilBERT base
-    3. [CLS] token extraction
-    4. Dense(128) + ReLU + Dropout
-    5. Dense(64) + ReLU + Dropout
-    6. Dense(1) + Sigmoid output for binary classification
+    Model Architecture:
+        1. Input layers:
+            - input_ids (int32): Token IDs
+            - attention_mask (int32): Attention mask
+        2. Transformer base:
+            - Pretrained DistilBERT model
+        3. Pooling:
+            - Extracts the [CLS] token from last_hidden_state
+        4. Classification head:
+            - Dense(128, ReLU) + Dropout
+            - Dense(64, ReLU) + Dropout
+            - Dense(1, Sigmoid) for binary sentiment prediction
 
     Args:
-        distilbert_model (TFDistilBertModel): A pretrained DistilBERT model.
-        dropout_rate (float): Dropout rate for regularization.
+        distilbert_model (TFDistilBertModel): A pretrained transformer model.
+        dropout_rate (float): Dropout rate applied after each dense layer for regularization.
 
     Returns:
         Tuple:
-            - model (tf.keras.Model): Fully assembled Keras model.
-            - distilbert_model (TFDistilBertModel): The base transformer model.
+            - model (tf.keras.Model): The assembled binary classification model.
+            - distilbert_model (TFDistilBertModel): The reused base transformer model.
     """
     print("🏗️ Building deep architecture...")
 
     # Input layers: token IDs and attention mask
-    input_ids = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='input_ids')
-    attention_mask = tf.keras.Input(shape=(TRAINING_PARAMS.max_len,), dtype=tf.int32, name='attention_mask')
+    input_ids = tf.keras.Input(
+        shape=(TRAINING_PARAMS.max_len,),
+        dtype=tf.int32,
+        name='input_ids'
+    )
+    attention_mask = tf.keras.Input(
+        shape=(TRAINING_PARAMS.max_len,),
+        dtype=tf.int32,
+        name='attention_mask'
+    )
     print("   ✅ Input layers created")
 
-    # DistilBERT pretrained extraction from Hugging Face
+    # Pass inputs through the DistilBERT model to get contextual embeddings
     distilbert_output = distilbert_model(
         input_ids=input_ids,
         attention_mask=attention_mask
@@ -74,13 +93,13 @@ def create_sentiment_model(
 
     # Classification head
     # First dense layer to reduce dimensionality and add non-linearity
-    x = tf.keras.layers.Dense(128, activation='relu', name='dense_128')(cls_token)
+    x = tf.keras.layers.Dense(256, activation='relu', name='dense_256')(cls_token)
     # Dropout to prevent overfitting after the first dense layer
     x = tf.keras.layers.Dropout(dropout_rate, name='dropout_1')(x)
-    # Second dense layer to further refine representation
-    x = tf.keras.layers.Dense(64, activation='relu', name='dense_64')(x)
-    # Additional dropout for regularization
+    x = tf.keras.layers.Dense(128, activation='relu', name='dense_128')(x)
     x = tf.keras.layers.Dropout(dropout_rate, name='dropout_2')(x)
+    x = tf.keras.layers.Dense(64, activation='relu', name='dense_64')(x)
+    x = tf.keras.layers.Dropout(dropout_rate, name='dropout_3')(x)
 
     # Final classification layer with sigmoid for binary output
     predictions = tf.keras.layers.Dense(1, activation='sigmoid', name='classifier')(x)
@@ -123,7 +142,7 @@ def build_model(transformer_model_name: str) -> tf.keras.Model:
     print(f"   📏 Input length: {TRAINING_PARAMS.max_len} tokens")
     print(f"   🎲 Dropout rate: {TRAINING_PARAMS.dropout_rate}")
 
-    print("📋 Model detailed architecture")
+    print("📋 Fine-tuned model detailed architecture")
     print("═" * 80)
     model.summary()
     print("═" * 80)
@@ -316,7 +335,7 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
     final_train_loss = history_data['loss'][-1]
     final_val_loss = history_data['val_loss'][-1]
 
-    print(f"🎯 Final performance:")
+    print("🎯 Final performance:")
     print(f"   📈 Training accuracy: {final_train_accuracy:.4f} ({final_train_accuracy * 100:.2f}%)")
     print(f"   ✅ Validation accuracy: {final_val_accuracy:.4f} ({final_val_accuracy * 100:.2f}%)")
     print(f"   📉 Training loss: {final_train_loss:.4f}")
@@ -324,7 +343,7 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
 
     # Overfitting analysis
     overfitting_gap = final_train_accuracy - final_val_accuracy
-    print(f"\n🔍 Overfitting analysis:")
+    print("\n🔍 Overfitting analysis:")
     if overfitting_gap < 0.05:
         print(f"   ✅ Well balanced (gap: {overfitting_gap:.4f})")
     elif overfitting_gap < 0.10:
@@ -336,7 +355,7 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
     best_epoch = history_data['val_accuracy'].index(max(history_data['val_accuracy'])) + 1
     best_val_acc = max(history_data['val_accuracy'])
 
-    print(f"\n🏆 Best epoch:")
+    print("\n🏆 Best epoch:")
     print(f"   📊 Epoch: {best_epoch}/{len(history_data['val_accuracy'])}")
     print(f"   🎯 Validation accuracy: {best_val_acc:.4f} ({best_val_acc * 100:.2f}%)")
 
@@ -413,23 +432,27 @@ def save_model_and_tokenizer(model, tokenizer, save_path: Path = MODEL_PATHS.bas
     Saves the trained model weights (TensorFlow format) and tokenizer for later reuse.
 
     Args:
-        model (tf.keras.Model): The trained Keras model whose weights are to be saved.
-        tokenizer (PreTrainedTokenizerFast): The tokenizer used during training.
-        save_path (Path): Base directory to save weights and tokenizer.
+        model (tf.keras.Model): The trained Keras model (teacher or student).
+        tokenizer (PreTrainedTokenizerFast): Tokenizer used during training.
+        save_path (Path): Base path to store 'checkpoint' and 'tokenizer' subdirectories.
     """
-    print(f"💾 Saving model weights to: {save_path}")
-    MODEL_PATHS.ensure_dirs()
+    print(f"💾 Saving model to: {save_path}")
+    save_path.mkdir(parents=True, exist_ok=True)
 
-    # ✅ Save weights using the TF format (Recommended)
-    model.save_weights(str(save_path / "checkpoint" / "weights"), save_format="tf")
-    print("✅ Weights saved (TensorFlow format)")
+    # Save model weights under 'checkpoint/weights'
+    checkpoint_dir = save_path / "checkpoint"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    weights_path = checkpoint_dir / "weights"
+    model.save_weights(str(weights_path), save_format="tf")
+    print(f"✅ Model weights saved to: {weights_path}")
 
-    # ✅ Save tokenizer
-    tokenizer.save_pretrained(str(save_path / "tokenizer"))
-    print(f"✅ Tokenizer saved to: {str(save_path / 'tokenizer')}")
+    # Save tokenizer under 'tokenizer/'
+    tokenizer_dir = save_path / "tokenizer"
+    tokenizer.save_pretrained(str(tokenizer_dir))
+    print(f"✅ Tokenizer saved to: {tokenizer_dir}")
 
 
-def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[Model, DistilBertTokenizerFast]:
+def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[tf.keras.Model, DistilBertTokenizerFast]:
     """
     Reconstructs the DistilBERT sentiment classification model and loads saved weights and tokenizer.
 
@@ -463,8 +486,11 @@ def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tup
     model, _ = create_sentiment_model(base_model)
 
     print(f"📦 Loading model weights from: {model_path}")
-    status = model.load_weights(str(model_path))
-    status.expect_partial() 
-    print("✅ Weights loaded successfully.")
+    try:
+        status = model.load_weights(str(model_path))
+        status.expect_partial() 
+        print("✅ Weights loaded successfully.")
+    except Exception as e:
+        raise RuntimeError(f"❌ Failed to load model weights: {e}")
 
     return model, tokenizer

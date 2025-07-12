@@ -18,29 +18,35 @@ This project aims to analyze **Bitcoin (BTC)** sentiment using public Twitter da
 
 ```bash
 lucen-ai/
-├── models/                            # 🧠 Fine-tuned models (saved checkpoints)
-│   └── distilbert_sentiment/
-│        ├── config.json               # Custom config (e.g., training parameters)
-│        ├── model.keras               # Full trained Keras model (TensorFlow format)
-│        └── tokenizer/                # Hugging Face tokenizer artifacts
-│            ├── vocab.txt
-│            ├── tokenizer_config.json
-│            └── special_tokens_map.json
 ├── data/                              # 📊 Dataset (raw)
 │   └── BTC_Tweets_Sentiments.csv
+├── docs/
+│   ├── MVP_Sprints.txt                # Agile sprints 
+│   └── project_pitch.pdf              # Presentation of the full lucen-ai project
 ├── notebooks/                         # 📓 Jupyter notebooks (EDA & experimentation)
 │   ├── data/                          # Intermediate files used during experimentation
 │   ├── logs/                          # Training logs (TensorBoard, etc.)
 │   ├── models/                        # Temporary model outputs
-│   ├── preparation_dataset.ipynb      # Data cleaning and preparation
-│   └── BERTweet_vs_distilBERT.ipynb   # Model comparison notebook
+│   ├── 01-preparation_dataset.ipynb      # Data cleaning and preparation
+│   ├── 02-BERTweet_vs_distilBERT.ipynb   # Model comparison notebook
+│   ├── 03-analyse_post_finetuning.ipynb  # Explore result of fine-tuned model
+│   └── 04-compare_teacher_student.ipynb  # Compare models performance and RAM/Disk occupation
 ├── lucenai/                           # 🧠 Core Python package
 │   ├── train/                         # 🔧 Data pipeline and model logic
 │   │   ├── preprocess.py              # Text preprocessing
 │   │   ├── tokenizer.py               # Tokenizer loading/wrapping
 │   │   ├── model.py                   # Model architecture & compilation
-│   │   ├── test.py                    # Evaluation functions
-│   │   └── utils.py                   # Utility functions
+│   │   ├── evaluation.py              # Evaluation functions
+│   │   ├── distillation.py            # Distillation of the fine-tuned model
+│   │   ├── utils.py                   # Utility functions
+│   │   └── models/distilbert_sentiment    # 🧠 Generated models
+│   │       ├── checkpoint/best_model/     # Fine-tuned model weight
+│   │       ├── tokenizer/                 # Fine-tuned model tokenizer
+│   │       ├── logs/teacher/              # Fine-tuned model logs
+│   │       ├── student_model/
+│   │       │   ├── checkpoint/            # Student weights
+│   │       │   └── tokenizer/             # Student tokenizer
+│   │       └── logs/student/              # Student logs 
 │   ├── api/                           # 🚀 FastAPI application
 │   │   ├── predict.py                 # Inference endpoint
 │   │   └── schemas.py                 # Pydantic schemas
@@ -130,8 +136,41 @@ lucenai/models/distilbert_sentiment/
 ```
 
 ### ✅ Notes
+
 - The model supports inference with TensorFlow's `.keras` format (recommended for Keras 3+).
 - Tokenizer artifacts are compatible with Hugging Face Transformers and ensure consistent preprocessing for inference and deployment.
+
+
+## 🧪 Distillation Support
+
+This project supports knowledge distillation to compress the fine-tuned DistilBERT model into a smaller student model for faster inference and reduced memory usage.
+
+### 🔧 How to use
+
+To train a student model via distillation:
+
+```bash
+python scripts/train.py --distill
+```
+
+This will:
+- Load the fine-tuned teacher model and tokenizer
+- Train a smaller student model using soft predictions from the teacher
+- Save the distilled model and tokenizer to the `models/distilbert_sentiment/student_model` directory
+  The structure is the same as `models/distilbert_sentiment/` (including model, weight tokenizer)
+
+To force retraining, including overwriting any previously saved model checkpoints:
+
+```bash
+python scripts/train.py --distill --force
+```
+
+The `--force` flag ensures the training starts from scratch, even if saved models exist.
+
+### ✅ Notes
+
+- Both teacher and student models use the same preprocessing pipeline.
+- The student model can be used for inference with the same FastAPI endpoint.
 
 
 ## 🌐 API Usage (FastAPI)

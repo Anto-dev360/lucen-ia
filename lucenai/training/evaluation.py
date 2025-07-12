@@ -1,8 +1,10 @@
 """
 evaluation.py
 
-Evaluation utilities for a fine-tuned DistilBERT model on a binary sentiment classification task.
-This script runs model evaluation on the test split from the original dataset and saves metrics and visualizations.
+Evaluation utilities for a fine-tuned DistilBERT model on a binary sentiment
+classification task.
+This script runs model evaluation on the test split from the original dataset
+and saves metrics and visualizations.
 
 Includes:
 - Classification report
@@ -19,20 +21,21 @@ License: MIT
 import json
 from typing import List
 from pathlib import Path
+
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from sklearn.metrics import (
-    classification_report,
     accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
-    confusion_matrix,
-    roc_curve
+    roc_curve,
 )
-import tensorflow as tf
-import numpy as np
 from transformers import PreTrainedTokenizerBase
+
 from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS
 
 
@@ -42,7 +45,7 @@ def evaluate_model_on_test_set(
     test_texts: List[str],
     test_labels: List[int],
     max_len: int = TRAINING_PARAMS.max_len,
-    output_dir = MODEL_PATHS.best_model
+    output_dir: Path = None 
 ) -> None:
     """
     Evaluates a trained model on the test set and saves metrics and plots to disk.
