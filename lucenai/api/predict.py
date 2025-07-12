@@ -9,34 +9,103 @@ Project: lucen_ai
 License: MIT
 """
 
+import logging
+from typing import Dict
+
 import numpy as np
 import tensorflow as tf
-from src.config import MODEL_WEIGHTS_PATH, TOKENIZER_PATH
-from transformers import AutoTokenizer
 
-# Load model and tokenizer at startup
-model = tf.keras.models.load_model(MODEL_WEIGHTS_PATH)
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
+from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS
+from lucenai.training.model import load_best_model_and_tokenizer
 
-def predict_sentiment(text: str) -> dict:
+# === Configure logger ===
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def load_model_and_tokenizer_safely():
     """
-    Predict the sentiment of a given text using the loaded DistilBERT model.
-
-    Args:
-        text (str): Input text.
+    Loads the fine-tuned DistilBERT model and tokenizer from configured paths.
 
     Returns:
-        dict: Dictionary containing the predicted label and confidence score.
+        Tuple[tf.keras.Model, transformers.PreTrainedTokenizer]:
+            - The fine-tuned Keras model.
+            - The associated tokenizer.
+
+    Raises:
+        RuntimeError: If loading the model or tokenizer fails.
     """
-    inputs = tokenizer(
-        text,
-        return_tensors="tf",
-        truncation=True,
-        padding=True,
-        max_length=256
-    )
-    logits = model(inputs)[0].numpy()
-    probs = tf.nn.softmax(logits, axis=1).numpy()[0]
-    label = "positive" if np.argmax(probs) == 1 else "negative"
-    score = float(np.max(probs))
-    return {"label": label, "score": score}
+    try:
+        logger.info(f"📥 Loading model from: {MODEL_PATHS.best_weights}")
+        logger.info(f"📥 Loading tokenizer from: {MODEL_PATHS.best_tokenizer}")
+
+        model, tokenizer = load_best_model_and_tokenizer(
+            model_path=MODEL_PATHS.best_weights,
+            tokenizer_path=MODEL_PATHS.best_tokenizer
+        )
+
+        logger.info("✅ Model and tokenizer loaded successfully.")
+        return model, tokenizer
+
+    except Exception as e:
+        logger.error(f"❌ Failed to load model/tokenizer: {e}")
+        raise RuntimeError(f"Could not load model/tokenizer: {e}")
+
+
+# === Load model and tokenizer once at module level ===
+model, tokenizer = load_model_and_tokenizer_safely()
+
+
+def predict_sentiment(text: str) -> Dict[str, float]:
+    """
+    Predict the sentiment of a given input text using the fine-tuned DistilBERT model.
+
+    This function performs the following steps:
+        1. Validates the input text.
+        2. Tokenizes the input using a pretrained tokenizer.
+        3. Feeds the tokenized input into a DistilBERT-based model.
+        4. Applies a sigmoid to obtain a probability score.
+        5. Maps the score to a sentiment label.
+
+    Sentiment labels:
+        - "positive": Indicates a generally favorable sentiment.
+        - "negative": Indicates a generally unfavorable sentiment.
+        - "invalid": Returned when input is empty or only whitespace.
+
+    Args:
+        text (str): The raw input text to classify.
+
+    Returns:
+        Dict[str, float]: A dictionary with:
+            - "label": The predicted sentiment label ("positive", "negative", or "invalid").
+            - "score": The model's confidence score for the predicted label, rounded to 4 decimal places.
+
+    Raises:
+        RuntimeError: If the prediction process fails due to model or tokenizer errors.
+    """
+    try:
+        if not text.strip():
+            logger.warning("⚠️ Empty input received for prediction.")
+            return {"label": "invalid", "score": 0.0}
+
+        inputs = tokenizer(
+            text,
+            return_tensors="tf",
+            truncation=True,
+            padding="max_length",
+            max_length=TRAINING_PARAMS.max_len
+        )
+
+        logits = model(inputs, training=False)
+        score = float(logits.numpy()[0][0])  # Single output due to sigmoid
+        label = "positive" if score >= 0.5 else "negative"
+
+        logger.debug(f"📝 Input: {text}")
+        logger.debug(f"📈 Sigmoid score: {score:.4f}")
+        logger.debug(f"🏷️ Predicted label: {label}")
+
+        return {"label": label, "score": round(score, 4)}
+
+    except Exception as e:
+        logger.error(f"❌ Inference failed: {e}")
+        raise RuntimeError(f"Prediction failed: {e}")
