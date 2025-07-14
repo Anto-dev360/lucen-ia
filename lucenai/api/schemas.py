@@ -1,33 +1,32 @@
 """
 schemas.py
 
-Pydantic schemas for input and output formats used in the API.
+Pydantic request/response models used by LucenAI's API.
 
 Author: Anthony Morin
-Created: 2025-07-01
-Project: lucen_ai
-License: MIT
+Created: 2025-07-14
 """
 
 from pydantic import BaseModel
+from typing import List
 
 
-class PredictionRequest(BaseModel):
+class TextInput(BaseModel):
     """
-    Request schema for sentiment prediction.
-
-    Attributes:
-        text (str): The text input to analyze.
+    Request schema for a single tweet or text input.
     """
     text: str
 
-class PredictionResponse(BaseModel):
-    """
-    Response schema for sentiment prediction.
 
-    Attributes:
-        label (str): Predicted label ('positive' or 'negative').
-        score (float): Confidence score for the prediction.
+class TweetItem(BaseModel):
     """
-    label: str
-    score: float
+    Represents a single tweet in a batch analysis.
+    """
+    text: str
+
+
+class TweetBatch(BaseModel):
+    """
+    Request schema for a batch of tweets.
+    """
+    tweets: List[TweetItem]

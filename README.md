@@ -31,8 +31,8 @@ lucen-ai/
 │   ├── 02-BERTweet_vs_distilBERT.ipynb   # Model comparison notebook
 │   ├── 03-analyse_post_finetuning.ipynb  # Explore result of fine-tuned model
 │   └── 04-compare_teacher_student.ipynb  # Compare models performance and RAM/Disk occupation
-├── lucenai/                           # 🧠 Core Python package
-│   ├── train/                         # 🔧 Data pipeline and model logic
+├─│ ─ lucenai/                           # 🧠 Core Python package
+│   ├── training/                      # 🔧 Data pipeline and model logic
 │   │   ├── preprocess.py              # Text preprocessing
 │   │   ├── tokenizer.py               # Tokenizer loading/wrapping
 │   │   ├── model.py                   # Model architecture & compilation
@@ -49,21 +49,24 @@ lucen-ai/
 │   │       └── logs/student/              # Student logs 
 │   ├── api/                           # 🚀 FastAPI application
 │   │   ├── predict.py                 # Inference endpoint
+│   │   ├── utils.py
 │   │   └── schemas.py                 # Pydantic schemas
 │   ├── config/                        # ⚙️ Project configuration
 │   │   └── settings.py
-│   └── frontend/                      # 🌐 Web frontend (basic UI)
-│       ├── index.html
-│       ├── app.js
-│       ├── crypta_data.json
-│       └── style.css
+│   ├── frontend/                      # 🌐 Web frontend (basic UI)
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── app.js
+│   │   └── style.css
+│   └── tests/ 
+│       └──  crypto_data.json          # Example BTC tweets
 ├── scripts/                           # 🛠️ CLI entrypoints
 │   ├── train.py                       # Launch model training
-│   └── app.py                         # Launch FastAPI server
+│   ├── serve_and_tunnel.sh            # Launch FastAPI server
+│   └── app.py                         # FastAPI entry point
 ├── README.md                          # 📖 Project overview and instructions
-├── Docker.train                       # Dockerfile for training environment
-├── Docker.api                         # Dockerfile for API environment
-├── requirements.txt                   # Dependencies
+├── Dockerfile                         # Dockerfile for training environment (GPU-enabled)
+├── requirements.txt                   # Dependencies for model building
 ├── .gitignore
 └── LICENSE
 ```
@@ -81,6 +84,8 @@ The `notebooks/` directory includes exploratory and comparative notebooks:
 - `BERTweet_vs_distilBERT.ipynb`: Model benchmarking
 - `notebooks/models/`: Model checkpoints generated during experimentation
 - `notebooks/data/` : cleaned dataset for training, validation and test
+
+📘 **Note:** The notebooks are written in French.
 
 ### 📈 Using TensorBoard for Training Visualization
 
@@ -175,91 +180,140 @@ The `--force` flag ensures the training starts from scratch, even if saved model
 
 ## 🌐 API Usage (FastAPI)
 
-The FastAPI server is containerized and exposes sentiment prediction as a REST endpoint.
+The FastAPI server is containerized and exposes sentiment prediction as REST endpoints.
 
-### 🔍 Example `POST /predict` request
+---
 
+### 🔍 `POST /predict` — Single Tweet Sentiment
+
+Predict the sentiment of a single tweet or short text.
+
+**Request:**
 ```bash
 curl -X POST http://localhost:8000/predict \
      -H "Content-Type: application/json" \
      -d '{"text": "Bitcoin is going to the moon 🚀"}'
 ```
 
-Response:
+**Response:**
 ```json
 {
   "label": "positive",
-  "confidence": 0.987
+  "confidence": 0.9874
 }
 ```
 
-### 🔁 API health check (`GET /health`)
+- `label`: Predicted sentiment (`"positive"`, `"negative"`, or `"invalid"`).
+- `confidence`: Confidence score of the prediction (0.0–1.0).
 
+---
+
+### 📁 `POST /analyze` — Analyze JSON File of Tweets
+
+Upload a JSON file containing a list of tweets for batch sentiment analysis.
+
+**File format:**
+
+```json
+[
+  { "id": 1, "text": "Bitcoin is breaking new highs again! 🚀 #BTC" },
+  { "id": 2, "text": "I'm not convinced about crypto anymore. So unstable... 😓" },
+  { "id": 3, "text": "Huge potential in blockchain tech, especially Bitcoin!" },
+  { "id": 4, "text": "BTC just crashed 5% in one hour. That's scary." }
+]
+```
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/analyze \
+     -F "file=@crypto_data.json"
+```
+
+**Response:**
+```json
+{
+  "positive": 0.65,
+  "negative": 0.35,
+  "total": 20
+}
+```
+
+---
+
+### 🩺 `GET /health` — API Health Check
+
+**Request:**
 ```bash
 curl http://localhost:8000/health
 ```
 
-Response:
+**Response:**
 ```json
 {
   "status": "ok"
 }
 ```
 
+---
 
-## 🐳 Docker
+## 🖥️ Frontend Interface
 
-This project uses two separate Dockerfiles to manage training and deployment environments independently:
+LucenAI also includes a built-in frontend interface.
 
-- `Docker.train`: for training the DistilBERT model on GPU (L4, Lightning AI-compatible)
-- `Docker.api`: for serving the FastAPI + frontend on CPU
+- You can **submit a single tweet** to analyze its sentiment.
+- Or **upload a `.json` file** with a list of tweet objects.
 
+**Accepted file format:**
 
-### 🐳 1. Build Docker Images
-
-From the project root:
-
-```bash
-# Build training image (GPU)
-docker build -f Dockerfile.train -t lucen-ia-train .
-
-# Build API image (CPU)
-docker build -f Docker.api -t lucen-api .
+```json
+[
+  { "id": 1, "text": "Example tweet here..." },
+  { "id": 2, "text": "Another one." }
+]
 ```
 
+The interface provides real-time feedback and visualizes the overall sentiment distribution.
 
-### 🎓 2. Run Training (GPU-enabled)
 
-To train the model on GPU using Docker, execute the following command from the project root:
+## 🚀 Run Locally with Tunnel
 
-```bash
-docker run --rm --gpus all \
-  -v $(pwd)/lucenai/models:/app/lucenai/models \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/scripts:/app/scripts \
-  -v $(pwd)/notebooks:/app/notebooks \
-  -v $(pwd)/lucenai/config:/app/lucenai/config \
-  lucen-ia-train
+To make the FastAPI server publicly accessible via a tunnel (e.g., for frontend testing or mobile integration), a helper script `serve_and_tunnel.sh` is provided.
+
+### Prerequisites
+
+1. Create a free account on [ngrok.com](https://ngrok.com/).
+2. Retrieve your authentication token.
+3. Create a `.env` file at the root of the project with the following:
+
+```
+NGROK_AUTH_TOKEN=your_token_here
 ```
 
-This command will:
-
-- Load the BTC tweet dataset from `/app/data`
-- Preprocess and tokenize the tweets using DistilBERT
-- Fine-tune the sentiment classification model
-- Saves the trained model (`model.keras`), configuration (`config.json`), and tokenizer files to: `lucenai/models/distilbert_sentiment/`
-
-
-### 🌐 3. Serve the API
+### Launch the API with tunnel
 
 ```bash
-docker run -p 8000:8000 lucen-api
+./scripts/serve_and_tunnel.sh
 ```
 
-Then visit:
+This will:
+- Start the FastAPI backend (`uvicorn`)
+- Expose it via an ngrok tunnel
+- Display the public URL you can use to interact with the API
 
-- 🖥️ Frontend: [http://localhost:8000](http://localhost:8000)
-- 📚 Swagger Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## 🐳 Docker (Training Only)
+
+Build the training image:
+
+```bash
+docker build -f Dockerfile -t lucen-ia-train .
+```
+
+Train with GPU:
+
+```bash
+docker run --rm --gpus all   -v $(pwd)/lucenai/models:/app/lucenai/models   -v $(pwd)/data:/app/data   -v $(pwd)/scripts:/app/scripts   -v $(pwd)/notebooks:/app/notebooks   -v $(pwd)/lucenai/config:/app/lucenai/config   lucen-ia-train
+```
 
 
 ## 📚 Libraries Used

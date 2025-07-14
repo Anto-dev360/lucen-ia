@@ -15,7 +15,7 @@ from typing import Dict
 import numpy as np
 import tensorflow as tf
 
-from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS
+from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS, LABELS
 from lucenai.training.model import load_best_model_and_tokenizer
 
 # === Configure logger ===
@@ -86,7 +86,7 @@ def predict_sentiment(text: str) -> Dict[str, float]:
     try:
         if not text.strip():
             logger.warning("⚠️ Empty input received for prediction.")
-            return {"label": "invalid", "score": 0.0}
+            return {"label": LABELS.INVALID, "score": 0.0}
 
         inputs = tokenizer(
             text,
@@ -98,7 +98,7 @@ def predict_sentiment(text: str) -> Dict[str, float]:
 
         logits = model(inputs, training=False)
         score = float(logits.numpy()[0][0])  # Single output due to sigmoid
-        label = "positive" if score >= 0.5 else "negative"
+        label = LABELS.POSITIVE if score >= 0.5 else LABELS.NEGATIVE
 
         logger.debug(f"📝 Input: {text}")
         logger.debug(f"📈 Sigmoid score: {score:.4f}")

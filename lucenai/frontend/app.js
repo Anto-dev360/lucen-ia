@@ -590,27 +590,35 @@ if (uploadForm) {
     const file = fileInput.files[0];
 
     if (!file) {
-      statusEl.textContent = 'Veuillez sélectionner un fichier JSON.';
+      statusEl.textContent = '⛔ Veuillez sélectionner un fichier JSON.';
       return;
     }
 
     const formData = new FormData();
     formData.append('file', file);
 
+    console.log("📤 Envoi du fichier JSON:", file.name);
+    console.log("📦 FormData:", formData);
+
+    statusEl.textContent = '⏳ Analyse en cours...';
+
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
+      const response = await fetch('/analyze', {
         method: 'POST',
         body: formData
       });
 
-      if (!response.ok) throw new Error('Réponse serveur non OK');
-
       const result = await response.json();
+      console.log("📥 Résultat prédiction:", result);
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Réponse serveur non OK');
+      }
 
       const positive = result.positive;
       const negative = result.negative;
 
-      // Met à jour la barre et les valeurs dans le DOM
+      // Mise à jour DOM
       document.getElementById('scorePositiveBar').style.width = `${positive * 100}%`;
       document.getElementById('scoreNegativeBar').style.width = `${negative * 100}%`;
 
@@ -630,6 +638,67 @@ if (uploadForm) {
     } catch (error) {
       console.error(error);
       statusEl.textContent = '❌ Erreur lors de l’analyse du fichier.';
+    }
+  });
+}
+
+// Gestion d'une prédiction de tweet individuel
+const singleForm = document.getElementById('singleTweetForm');
+if (singleForm) {
+  singleForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const statusEl = document.getElementById('singleTweetStatus');
+    const tweet = document.getElementById('tweetInput').value;
+
+    console.log("📝 Texte soumis:", tweet);
+
+    if (!tweet.trim()) {
+      statusEl.textContent = '⛔ Veuillez entrer un texte.';
+      return;
+    }
+
+    statusEl.textContent = '⏳ Prédiction en cours...';
+
+    try {
+      const response = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: tweet })
+      });
+
+      const result = await response.json();
+      console.log("📥 Résultat analyse JSON:", result);
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Réponse serveur non OK');
+      }
+
+    // Définir les styles et calculer la confiance en fonction du label
+    let color = '#999';
+    let icon = '⚠️';
+    let confidence = result.score;
+
+    if (result.label === 'positive') {
+      color = 'var(--color-success)';
+      icon = '📈';
+      confidence = result.score;
+    } else if (result.label === 'negative') {
+      color = 'var(--color-error)';
+      icon = '📉';
+      confidence = 1 - result.score;
+    }
+
+    // Mise à jour du statut avec couleur + infobulle
+    statusEl.innerHTML = `
+      <span style="color: ${color}; font-weight: bold;" title="Score de confiance du modèle pour cette prédiction (entre 0 et 100%)">
+        ${icon} Prédiction : ${result.label} — Confiance : ${(confidence * 100).toFixed(1)}%
+      </span>
+    `;
+
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = '❌ Erreur lors de la prédiction.';
     }
   });
 }

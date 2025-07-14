@@ -1,3 +1,18 @@
+"""
+utils.py
+
+Utility functions for NLP training and reproducibility setup in LucenAI.
+
+Includes:
+- GPU configuration for TensorFlow
+- Reproducibility seed setup
+- Matplotlib configuration
+
+Author: Anthony Morin
+Created: 2025-07-14
+Project: lucen_ai
+License: MIT
+"""
 
 import os
 import random

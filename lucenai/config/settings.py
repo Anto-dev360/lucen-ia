@@ -108,8 +108,23 @@ CSV_LOG_FILE = BASE_DIR / "training_log.csv"
 TENSORBOARD_LOG_DIR = BASE_DIR / "logs"
 
 
+# === 🏷️ SENTIMENT LABELS ===
+
+@dataclass(frozen=True)
+class SentimentLabels:
+    POSITIVE: str = "positive"
+    NEGATIVE: str = "negative"
+    INVALID: str = "invalid"
+
+LABELS = SentimentLabels()
+
+
 # === 🌐 API METADATA ===
 
-API_TITLE = "Sentiment Analysis API"
-API_VERSION = "1.0"
-API_DESCRIPTION = "Predict sentiment from a tweet using DistilBERT"
+@dataclass(frozen=True)
+class APIMetadata:
+    title: str = "Sentiment Analysis API"
+    version: str = "1.0"
+    description: str = "Predict sentiment from a tweet using DistilBERT"
+
+API_METADATA = APIMetadata()

@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DYOR Crypto Analyzer</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -63,41 +64,54 @@
             <!-- Feedback on X (visible uniquement pour BTC) -->
             <div id="dyor_feelings" class="dyor-score-section" style="display: none;">
                 <div class="card">
-                    <div class="card__header">
-                        <h3>💬 Feedback on X</h3>
-                    </div>
-                    <div class="card__body">
-                        <!-- Zone d'upload du fichier JSON -->
-                        <p>Importer un fichier JSON de tweets à analyser :</p>
-                        <form id="uploadForm" enctype="multipart/form-data" style="margin-bottom: 16px;">
-                            <input type="file" id="tweetFile" name="tweetFile" accept=".json" required />
-                            <button type="submit">Analyser les Tweets</button>
-                        </form>
-                        <p id="uploadStatus" style="margin-bottom: 16px;"></p>
-
-                        <!-- Résultat d'analyse -->
-                        <p>Analyse des sentiments des tweets sur BTC :</p>
-                        <div class="score-breakdown">
-                            <div class="score-item">
-                                <div class="score-item__label">Positifs</div>
-                                <div class="score-item__bar">
-                                    <div id="scorePositiveBar" class="score-bar" style="width: 70%; background-color: var(--color-success);"></div>
-                                </div>
-                                <div id="scorePositiveValue" class="score-item__value">70%</div>
-                            </div>
-                            <div class="score-item">
-                                <div class="score-item__label">Négatifs</div>
-                                <div class="score-item__bar">
-                                    <div id="scoreNegativeBar" class="score-bar" style="width: 30%; background-color: var(--color-error);"></div>
-                                </div>
-                                <div id="scoreNegativeValue" class="score-item__value">30%</div>
-                            </div>
+                <div class="card__header">
+                    <h3>💬 Feedback on X</h3>
+                </div>
+                <div class="card__body">
+            
+                    <!-- 📁 Analyse de fichier JSON -->
+                    <section style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                    <p><strong>Importer un fichier JSON de tweets à analyser :</strong></p>
+                    <form id="uploadForm" enctype="multipart/form-data" style="margin-bottom: 12px;">
+                        <input type="file" id="tweetFile" name="tweetFile" accept=".json" required />
+                        <button type="submit">Analyser les Tweets</button>
+                    </form>
+                    <p id="uploadStatus" style="margin-bottom: 16px;"></p>
+            
+                    <p><strong>Analyse des sentiments globaux sur BTC :</strong></p>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                        <div class="score-item__label">Positifs</div>
+                        <div class="score-item__bar">
+                            <div id="scorePositiveBar" class="score-bar" style="width: 0%; background-color: var(--color-success);"></div>
                         </div>
-                        <p id="conclusion" style="margin-top: 16px;">Conclusion : le sentiment global autour de Bitcoin est plutôt positif en ce moment.</p>
+                        <div id="scorePositiveValue" class="score-item__value">0%</div>
+                        </div>
+                        <div class="score-item">
+                        <div class="score-item__label">Négatifs</div>
+                        <div class="score-item__bar">
+                            <div id="scoreNegativeBar" class="score-bar" style="width: 0%; background-color: var(--color-error);"></div>
+                        </div>
+                        <div id="scoreNegativeValue" class="score-item__value">0%</div>
+                        </div>
                     </div>
+                    <p id="conclusion" style="margin-top: 16px;">Aucune analyse effectuée.</p>
+                    </section>
+            
+                    <!-- ✍️ Prédiction individuelle -->
+                    <section>
+                    <p><strong>Ou analyser un tweet individuel :</strong></p>
+                    <form id="singleTweetForm" style="margin-bottom: 12px;">
+                        <textarea id="tweetInput" placeholder="Ex : Bitcoin is pumping hard today!" rows="3" style="width: 100%;" required></textarea>
+                        <button type="submit" style="margin-top: 8px;">Analyser ce tweet</button>
+                    </form>
+                    <p id="singleTweetStatus" style="margin-bottom: 8px;" title="Score de confiance fourni par le modèle DistilBERT.">Aucun tweet analysé.</p>
+                    </section>
+            
+                </div>
                 </div>
             </div>
-
+  
             <!-- Grille principale -->
             <div class="analysis-grid">
                 <!-- Vue d'ensemble -->
@@ -272,7 +286,6 @@
         </div>
 
 </main>
-
-    <script src="app.js"></script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
