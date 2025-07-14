@@ -1,23 +1,18 @@
-# Docker.api
-
 FROM python:3.10-slim
 
-# Install basic dependencies
-RUN apt-get update && apt-get install -y \
-    git curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy project files
-COPY ./lucenai /app/lucenai
-COPY ./scripts/app.py /app/scripts/app.py
-COPY ./requirements.txt /app/requirements.txt
+# Copier les fichiers
+COPY . /app
 
-# Install Python dependencies
+# Installer les dépendances
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-# Expose FastAPI port
+# Exposer le port de l'API
 EXPOSE 8000
 
+# Lancer FastAPI
 CMD ["uvicorn", "scripts.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -249,32 +249,32 @@ let priceChart = null;
 // Système de calcul du score DYOR
 function calculateDYORScore(crypto) {
   const data = cryptoData[crypto];
-  
+
   // Performance de prix (20%)
-  const priceScore = Math.max(0, Math.min(100, 
+  const priceScore = Math.max(0, Math.min(100,
     (data.variation_24h + data.variation_7j) * 5 + 50
   ));
-  
+
   // Solidité technologique (25%)
   const techScore = getTechScore(crypto);
-  
+
   // Métriques onchain (25%)
   const onchainScore = getOnchainScore(crypto);
-  
+
   // Position de marché (15%)
   const marketScore = Math.max(0, 100 - (data.rang_marche - 1) * 2);
-  
+
   // Potentiel de croissance (15%)
   const growthScore = getGrowthScore(crypto);
-  
+
   const totalScore = Math.round(
-    (priceScore * 0.2) + 
-    (techScore * 0.25) + 
-    (onchainScore * 0.25) + 
-    (marketScore * 0.15) + 
+    (priceScore * 0.2) +
+    (techScore * 0.25) +
+    (onchainScore * 0.25) +
+    (marketScore * 0.15) +
     (growthScore * 0.15)
   );
-  
+
   return {
     total: totalScore,
     price: Math.round(priceScore),
@@ -330,12 +330,12 @@ function createTags(items, className = 'tag') {
 function updateUI(crypto) {
   const data = cryptoData[crypto];
   const scores = calculateDYORScore(crypto);
-  
+
   // Nom et score global
   document.getElementById('cryptoName').textContent = data.nom;
   document.getElementById('dyorScore').textContent = scores.total;
   document.getElementById('scoreGauge').style.width = scores.total + '%';
-  
+
   // Rating
   const rating = document.getElementById('dyorRating');
   rating.className = 'status';
@@ -352,23 +352,23 @@ function updateUI(crypto) {
     rating.classList.add('status--error');
     rating.textContent = 'Risqué';
   }
-  
+
   // Vue d'ensemble
   document.getElementById('currentPrice').textContent = formatPrice(data.prix_actuel);
   document.getElementById('marketCap').textContent = '$' + data.market_cap;
   document.getElementById('volume24h').textContent = '$' + data.volume_24h;
   document.getElementById('marketRank').textContent = '#' + data.rang_marche;
-  
+
   // Variations
   const var24h = document.getElementById('variation24h');
   const var7d = document.getElementById('variation7d');
-  
+
   var24h.textContent = (data.variation_24h > 0 ? '+' : '') + data.variation_24h.toFixed(2) + '%';
   var24h.className = 'variation-value ' + (data.variation_24h > 0 ? 'positive' : 'negative');
-  
+
   var7d.textContent = (data.variation_7j > 0 ? '+' : '') + data.variation_7j.toFixed(2) + '%';
   var7d.className = 'variation-value ' + (data.variation_7j > 0 ? 'positive' : 'negative');
-  
+
   // Fondamentaux
   document.getElementById('technology').textContent = data.fondamentaux.technologie;
   document.getElementById('useCase').textContent = data.fondamentaux.cas_usage;
@@ -376,16 +376,16 @@ function updateUI(crypto) {
   document.getElementById('challenges').innerHTML = createTags(data.fondamentaux.defis, 'tag');
   document.getElementById('supplyCirculating').textContent = data.supply_circulant;
   document.getElementById('supplyMax').textContent = data.supply_max;
-  
+
   // Onchain métriques
   document.getElementById('activeAddresses').textContent = data.onchain.adresses_actives;
   document.getElementById('avgFees').textContent = data.onchain.frais_moyens;
   document.getElementById('confirmationTime').textContent = data.onchain.temps_confirmation;
-  
+
   // Métrique spéciale selon la crypto
   const specialLabel = document.getElementById('specialMetricLabel');
   const specialValue = document.getElementById('specialMetricValue');
-  
+
   if (crypto === 'BTC') {
     specialLabel.textContent = 'Hash Rate';
     specialValue.textContent = data.onchain.hash_rate;
@@ -417,20 +417,20 @@ function updateUI(crypto) {
     specialLabel.textContent = 'TVL';
     specialValue.textContent = data.onchain.tvl;
   }
-  
+
   // Santé du réseau
   const networkHealth = document.getElementById('networkHealth');
   networkHealth.className = 'status status--success';
   networkHealth.textContent = 'Excellent';
-  
+
   // Scores détaillés
   updateScoreBar('priceScore', scores.price);
   updateScoreBar('techScore', scores.tech);
   updateScoreBar('onchainScore', scores.onchain);
   updateScoreBar('marketScore', scores.market);
   updateScoreBar('growthScore', scores.growth);
-  
-  
+
+
   // Affichage Feedback on X
   const feedbackSection = document.getElementById('dyor_feelings');
   if (crypto === 'BTC') {
@@ -441,7 +441,7 @@ function updateUI(crypto) {
 
   // Recommandations
   updateRecommendations(crypto, scores);
-  
+
   // Graphique
   updatePriceChart(crypto);
 }
@@ -456,7 +456,7 @@ function updateScoreBar(id, score) {
 function updateRecommendations(crypto, scores) {
   const recommendations = document.getElementById('recommendations');
   let recList = [];
-  
+
   if (scores.total >= 80) {
     recList.push('<div class="recommendation-item status--success">✅ Actif recommandé pour investissement</div>');
   } else if (scores.total >= 60) {
@@ -464,31 +464,31 @@ function updateRecommendations(crypto, scores) {
   } else {
     recList.push('<div class="recommendation-item status--warning">⚠️ Analyser les risques avant investissement</div>');
   }
-  
+
   if (scores.price < 50) {
     recList.push('<div class="recommendation-item status--warning">⚠️ Performance récente faible</div>');
   }
-  
+
   if (scores.growth > 80) {
     recList.push('<div class="recommendation-item status--success">🚀 Fort potentiel de croissance</div>');
   }
-  
+
   recommendations.innerHTML = recList.join('');
 }
 
 function updatePriceChart(crypto) {
   const ctx = document.getElementById('priceChart').getContext('2d');
-  
+
   if (priceChart) {
     priceChart.destroy();
   }
-  
+
   // Données simulées pour le graphique
   const data = cryptoData[crypto];
   const basePrice = data.prix_actuel;
   const labels = ['6j', '5j', '4j', '3j', '2j', '1j', 'Aujourd\'hui'];
   const prices = generatePriceHistory(basePrice, data.variation_7j);
-  
+
   priceChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -536,13 +536,13 @@ function updatePriceChart(crypto) {
 function generatePriceHistory(currentPrice, variation7d) {
   const prices = [];
   const dailyVariation = variation7d / 7;
-  
+
   for (let i = 6; i >= 0; i--) {
     const variance = (Math.random() - 0.5) * 0.1; // ±5% de variance
     const price = currentPrice * (1 - (dailyVariation * i / 100) + variance);
     prices.push(price);
   }
-  
+
   return prices;
 }
 
@@ -550,7 +550,7 @@ function generatePriceHistory(currentPrice, variation7d) {
 function toggleTheme() {
   const body = document.body;
   const themeIcon = document.querySelector('.theme-icon');
-  
+
   if (body.hasAttribute('data-color-scheme')) {
     const currentTheme = body.getAttribute('data-color-scheme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -570,11 +570,66 @@ document.addEventListener('DOMContentLoaded', function() {
     currentCrypto = this.value;
     updateUI(currentCrypto);
   });
-  
+
   // Toggle de thème
   const themeToggle = document.getElementById('themeToggle');
   themeToggle.addEventListener('click', toggleTheme);
-  
+
   // Initialisation avec BTC
   updateUI(currentCrypto);
 });
+
+// Gestion de l'upload et analyse des sentiments Twitter
+const uploadForm = document.getElementById('uploadForm');
+if (uploadForm) {
+  uploadForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('tweetFile');
+    const statusEl = document.getElementById('uploadStatus');
+    const file = fileInput.files[0];
+
+    if (!file) {
+      statusEl.textContent = 'Veuillez sélectionner un fichier JSON.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:8000/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Réponse serveur non OK');
+
+      const result = await response.json();
+
+      const positive = result.positive;
+      const negative = result.negative;
+
+      // Met à jour la barre et les valeurs dans le DOM
+      document.getElementById('scorePositiveBar').style.width = `${positive * 100}%`;
+      document.getElementById('scoreNegativeBar').style.width = `${negative * 100}%`;
+
+      document.getElementById('scorePositiveValue').textContent = `${Math.round(positive * 100)}%`;
+      document.getElementById('scoreNegativeValue').textContent = `${Math.round(negative * 100)}%`;
+
+      const conclusion = document.getElementById('conclusion');
+      if (positive > negative) {
+        conclusion.textContent = 'Conclusion : le sentiment global autour de Bitcoin est plutôt positif en ce moment.';
+      } else if (negative > positive) {
+        conclusion.textContent = 'Conclusion : le sentiment global autour de Bitcoin est plutôt négatif en ce moment.';
+      } else {
+        conclusion.textContent = 'Conclusion : les opinions sur Bitcoin sont partagées.';
+      }
+
+      statusEl.textContent = '✅ Analyse terminée avec succès.';
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = '❌ Erreur lors de l’analyse du fichier.';
+    }
+  });
+}

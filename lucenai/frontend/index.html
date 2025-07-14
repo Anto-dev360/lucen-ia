@@ -59,35 +59,44 @@
                     </div>
                 </div>
             </div>
-			
-			<!-- Feedback on X (visible uniquement pour BTC) -->
-			<div id="dyor_feelings" class="dyor-score-section" style="display: none;">
-				<div class="card">
-					<div class="card__header">
-						<h3>💬 Feedback on X</h3>
-					</div>
-					<div class="card__body">
-						<p>Analyse des sentiments des tweets sur BTC :</p>
-						<div class="score-breakdown">
-							<div class="score-item">
-								<div class="score-item__label">Positifs</div>
-								<div class="score-item__bar">
-									<div class="score-bar" style="width: 70%; background-color: var(--color-success);"></div>
-								</div>
-								<div class="score-item__value">70%</div>
-							</div>
-							<div class="score-item">
-								<div class="score-item__label">Négatifs</div>
-								<div class="score-item__bar">
-									<div class="score-bar" style="width: 30%; background-color: var(--color-error);"></div>
-								</div>
-								<div class="score-item__value">30%</div>
-							</div>
-						</div>
-						<p style="margin-top: 16px;">Conclusion : le sentiment global autour de Bitcoin est plutôt positif en ce moment.</p>
-					</div>
-				</div>
-			</div>
+
+            <!-- Feedback on X (visible uniquement pour BTC) -->
+            <div id="dyor_feelings" class="dyor-score-section" style="display: none;">
+                <div class="card">
+                    <div class="card__header">
+                        <h3>💬 Feedback on X</h3>
+                    </div>
+                    <div class="card__body">
+                        <!-- Zone d'upload du fichier JSON -->
+                        <p>Importer un fichier JSON de tweets à analyser :</p>
+                        <form id="uploadForm" enctype="multipart/form-data" style="margin-bottom: 16px;">
+                            <input type="file" id="tweetFile" name="tweetFile" accept=".json" required />
+                            <button type="submit">Analyser les Tweets</button>
+                        </form>
+                        <p id="uploadStatus" style="margin-bottom: 16px;"></p>
+
+                        <!-- Résultat d'analyse -->
+                        <p>Analyse des sentiments des tweets sur BTC :</p>
+                        <div class="score-breakdown">
+                            <div class="score-item">
+                                <div class="score-item__label">Positifs</div>
+                                <div class="score-item__bar">
+                                    <div id="scorePositiveBar" class="score-bar" style="width: 70%; background-color: var(--color-success);"></div>
+                                </div>
+                                <div id="scorePositiveValue" class="score-item__value">70%</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-item__label">Négatifs</div>
+                                <div class="score-item__bar">
+                                    <div id="scoreNegativeBar" class="score-bar" style="width: 30%; background-color: var(--color-error);"></div>
+                                </div>
+                                <div id="scoreNegativeValue" class="score-item__value">30%</div>
+                            </div>
+                        </div>
+                        <p id="conclusion" style="margin-top: 16px;">Conclusion : le sentiment global autour de Bitcoin est plutôt positif en ce moment.</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Grille principale -->
             <div class="analysis-grid">
