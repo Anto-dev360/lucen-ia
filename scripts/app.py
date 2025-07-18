@@ -10,21 +10,25 @@ Project: lucen_ai
 License: MIT
 """
 
+import json
+import logging
 import os
 import sys
-import json
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+
+# Reduce TensorFlow log level to warn
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 # Local imports (after sys.path modification if needed)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from lucenai.api.schemas import TextInput, TweetItem, TweetBatch
-from lucenai.api.predict import predict_sentiment
-from lucenai.api.utils import aggregate_sentiment
+from lucenai.api.predict import predict_sentiment, aggregate_sentiment
+from lucenai.api.schemas import TextInput
 from lucenai.config.settings import API_METADATA
 
 # === Initialize FastAPI ===
@@ -103,7 +107,21 @@ async def analyze_file(file: UploadFile = File(...)):
         if not texts:
             raise HTTPException(status_code=422, detail="No valid 'text' fields found in uploaded file.")
 
-        return aggregate_sentiment(texts)
+        # return aggregate_sentiment(texts)
+        # +Debug:
+                # Liste des prédictions individuelles
+        detailed = [predict_sentiment(text) for text in texts]
+        for i, pred in enumerate(detailed):
+            pred["text"] = texts[i]  # ajoute le texte pour affichage/debug
+
+        aggregate = aggregate_sentiment(texts)
+
+        return {
+            **aggregate,
+            "details": detailed  # 👈 inclus ici
+        }
+        # -Debug
+
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format.")

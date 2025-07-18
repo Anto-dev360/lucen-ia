@@ -9,16 +9,17 @@ Project: lucen_ai
 License: MIT
 """
 
-from dataclasses import dataclass
+import shutil
+from dataclasses import dataclass, field
 from pathlib import Path
 
-# === 📁 GENERAL ===
+# === GENERAL ===
 
 PROJECT_NAME = "lucen_ai"
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
-# === 📊 DATA PATHS ===
+# === DATA PATHS ===
 
 @dataclass
 class DataPaths:
@@ -32,7 +33,7 @@ class DataPaths:
 DATA_PATHS = DataPaths()
 
 
-# === 🧠 MODEL PATHS ===
+# === MODEL PATHS ===
 
 @dataclass
 class ModelPaths:
@@ -42,27 +43,44 @@ class ModelPaths:
     best_root: Path = base
     best_weights: Path = base / "checkpoint" / "best_model"
     best_tokenizer: Path = base / "tokenizer"
-    best_logs: Path = base / "logs" / "teacher"
 
     # Student (distilled)
     student_root: Path = base / "student_model"
     student_weights: Path = student_root / "checkpoint" / "weights"
     student_tokenizer: Path = student_root / "tokenizer"
-    student_logs: Path = base / "logs" / "student"
 
     def ensure_dirs(self):
         """Create all required directory trees."""
         self.base.mkdir(parents=True, exist_ok=True)
-        self.best_logs.mkdir(parents=True, exist_ok=True)
         self.student_root.mkdir(parents=True, exist_ok=True)
-        self.student_logs.mkdir(parents=True, exist_ok=True)
 
 MODEL_PATHS = ModelPaths()
 
 
-# === ⚙️ TRAINING PARAMETERS ===
+# === LOGGING PATHS ===
 
 @dataclass
+class LoggingPaths:
+    tensorboard_log_dir: Path = MODEL_PATHS.base / "logs" / "training"
+    csv_log_file: Path = tensorboard_log_dir / "training_log.csv"
+
+    def ensure_dirs(self):
+        """Create all required directory trees."""
+        self.tensorboard_log_dir.mkdir(parents=True, exist_ok=True)
+
+    def clean_logs(self):
+        """Remove old logs (CSV and TensorBoard) before training."""
+        if self.tensorboard_log_dir.exists():
+            print("🧹 Cleaning up previous logs...")
+            shutil.rmtree(self.tensorboard_log_dir)
+        self.ensure_dirs()
+
+LOGGING_PATHS = LoggingPaths()
+
+
+# === TRAINING PARAMETERS ===
+
+@dataclass(frozen=True)
 class TrainingParams:
     model_name: str = "distilbert-base-uncased"
     batch_size: int = 32
@@ -75,9 +93,9 @@ class TrainingParams:
 TRAINING_PARAMS = TrainingParams()
 
 
-# === ⚙️ DISTILLATION PARAMETERS ===
+# === DISTILLATION PARAMETERS ===
 
-@dataclass
+@dataclass(frozen=True)
 class DistillationParams:
     temperature: float = 1.0    # Temperature for soft target smoothing.
     alpha: float = 0.3          # Weight between distillation and ground truth loss.
@@ -90,9 +108,9 @@ class DistillationParams:
 DISTILATION_PARAMS = DistillationParams()
 
 
-# === 🧪 CALLBACK SETTINGS ===
+# === CALLBACK SETTINGS ===
 
-@dataclass
+@dataclass(frozen=True)
 class CallbackConfig:
     early_stopping_patience: int = 2
     lr_reduce_patience: int = 3
@@ -102,29 +120,32 @@ class CallbackConfig:
 CALLBACK_CONFIG = CallbackConfig()
 
 
-# === 📝 LOGGING ===
-
-CSV_LOG_FILE = BASE_DIR / "training_log.csv"
-TENSORBOARD_LOG_DIR = BASE_DIR / "logs"
-
-
-# === 🏷️ SENTIMENT LABELS ===
+# === SENTIMENT LABELS ===
 
 @dataclass(frozen=True)
 class SentimentLabels:
-    POSITIVE: str = "positive"
-    NEGATIVE: str = "negative"
-    INVALID: str = "invalid"
+    positive: str = "positive"
+    negative: str = "negative"
+    invalid: str = "invalid"
 
 LABELS = SentimentLabels()
 
 
-# === 🌐 API METADATA ===
+# === API METADATA ===
 
 @dataclass(frozen=True)
 class APIMetadata:
-    title: str = "Sentiment Analysis API"
+    title: str = "API d'analyse de sentiment"
     version: str = "1.0"
-    description: str = "Predict sentiment from a tweet using DistilBERT"
+    threshold: float = 0.55
+    description: str = field(init=False)
+
+    def __post_init__(self):
+        object.__setattr__(
+            self,
+            "description",
+            f"Prédit le sentiment d’un tweet à l’aide de DistilBERT.\n"
+            f"Seuil de classification utilisé lors de l'inférence : {self.threshold}"
+        )
 
 API_METADATA = APIMetadata()

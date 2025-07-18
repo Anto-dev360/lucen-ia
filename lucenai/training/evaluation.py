@@ -19,8 +19,8 @@ License: MIT
 """
 
 import json
-from typing import List
 from pathlib import Path
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -36,7 +36,7 @@ from sklearn.metrics import (
 )
 from transformers import PreTrainedTokenizerBase
 
-from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS
+from lucenai.config.settings import TRAINING_PARAMS
 
 
 def evaluate_model_on_test_set(
@@ -45,7 +45,7 @@ def evaluate_model_on_test_set(
     test_texts: List[str],
     test_labels: List[int],
     max_len: int = TRAINING_PARAMS.max_len,
-    output_dir: Path = None 
+    output_dir: Path = None
 ) -> None:
     """
     Evaluates a trained model on the test set and saves metrics and plots to disk.
@@ -98,6 +98,7 @@ def evaluate_model_on_test_set(
     print(f"   🧠 F1 Score : {f1:.4f}")
     print(f"   🧬 ROC AUC  : {auc:.4f}")
 
+    
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Save JSON report

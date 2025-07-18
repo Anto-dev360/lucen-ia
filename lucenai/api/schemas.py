@@ -7,8 +7,9 @@ Author: Anthony Morin
 Created: 2025-07-14
 """
 
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
 
 
 class TextInput(BaseModel):

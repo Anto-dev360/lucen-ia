@@ -581,6 +581,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Gestion de l'upload et analyse des sentiments Twitter
 const uploadForm = document.getElementById('uploadForm');
+const DEBUG = true;
+
 if (uploadForm) {
   uploadForm.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -594,11 +596,22 @@ if (uploadForm) {
       return;
     }
 
+    if (DEBUG) {
+      console.log("📂 Fichier sélectionné :", {
+        name: file.name,
+        size: file.size + ' octets',
+        type: file.type
+      });
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
-    console.log("📤 Envoi du fichier JSON:", file.name);
-    console.log("📦 FormData:", formData);
+    if (DEBUG) {
+      formData.forEach((value, key) => {
+        console.log(`📦 FormData entry: ${key} =>`, value);
+      });
+    }
 
     statusEl.textContent = '⏳ Analyse en cours...';
 
@@ -609,7 +622,10 @@ if (uploadForm) {
       });
 
       const result = await response.json();
-      console.log("📥 Résultat prédiction:", result);
+
+      if (DEBUG) {
+        console.log("📥 Résultat complet de l’analyse :", JSON.stringify(result, null, 2));
+      }
 
       if (!response.ok || result.error) {
         throw new Error(result.error || 'Réponse serveur non OK');
@@ -617,6 +633,21 @@ if (uploadForm) {
 
       const positive = result.positive;
       const negative = result.negative;
+
+      if (DEBUG) {
+        console.log(`📊 Scores reçus - Positif: ${(positive * 100).toFixed(1)}% | Négatif: ${(negative * 100).toFixed(1)}%`);
+      }
+
+      if (result.details && Array.isArray(result.details)) {
+        console.log(`🔎 ${result.details.length} tweets analysés individuellement :`);
+        result.details.forEach((entry, idx) => {
+          console.log(`  #${idx + 1}:`, {
+            text: entry.text,
+            label: entry.label,
+            score: entry.score
+          });
+        });
+      }
 
       // Mise à jour DOM
       document.getElementById('scorePositiveBar').style.width = `${positive * 100}%`;

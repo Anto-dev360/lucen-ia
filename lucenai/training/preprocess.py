@@ -217,6 +217,10 @@ def split_dataset(
             stratify=temp_df['label'],
             random_state=TRAINING_PARAMS.seed
         )
+        print("✅ Class distribution after split:")
+        print(f"Train:{train_df['label'].value_counts(normalize=True)}")
+        print(f"Val:{val_df['label'].value_counts(normalize=True)}")
+        print(f"Test:{test_df['label'].value_counts(normalize=True)}")
         return train_df, val_df, test_df
     else:
         train_df, val_df = train_test_split(
@@ -225,6 +229,9 @@ def split_dataset(
             stratify=df["label"],
             random_state=TRAINING_PARAMS.seed
         )
+        print("✅ Class distribution after split:")
+        print(f"Train:{train_df['label'].value_counts(normalize=True)}")
+        print(f"Val:{val_df['label'].value_counts(normalize=True)}")
         return train_df, val_df
 
 

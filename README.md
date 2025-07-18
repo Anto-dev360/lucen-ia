@@ -66,6 +66,7 @@ lucen-ai/
 │   └── app.py                         # FastAPI entry point
 ├── README.md                          # 📖 Project overview and instructions
 ├── Dockerfile                         # Dockerfile for training environment (GPU-enabled)
+├── Dockerfile.api                     # Dockerfile for inference via API
 ├── requirements.txt                   # Dependencies for model building
 ├── .gitignore
 └── LICENSE
@@ -301,9 +302,14 @@ This will:
 - Display the public URL you can use to interact with the API
 
 
-## 🐳 Docker (Training Only)
+## 🐳 Docker
 
-Build the training image:
+This project provides Docker images for:
+
+- 📦 Training the DistilBERT model
+- 🌐 Serving predictions via a FastAPI + Ngrok-powered API
+
+### 🔧 Build the training image
 
 ```bash
 docker build -f Dockerfile -t lucen-ia-train .
@@ -312,9 +318,52 @@ docker build -f Dockerfile -t lucen-ia-train .
 Train with GPU:
 
 ```bash
-docker run --rm --gpus all   -v $(pwd)/lucenai/models:/app/lucenai/models   -v $(pwd)/data:/app/data   -v $(pwd)/scripts:/app/scripts   -v $(pwd)/notebooks:/app/notebooks   -v $(pwd)/lucenai/config:/app/lucenai/config   lucen-ia-train
+docker run --rm --gpus all \
+  -v $(pwd)/lucenai/models:/app/lucenai/models \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/scripts:/app/scripts \
+  -v $(pwd)/notebooks:/app/notebooks \
+  -v $(pwd)/lucenai/config:/app/lucenai/config \
+  lucen-ia-train
 ```
 
+Train with CPU:
+
+```bash
+docker run --rm \
+  -v $(pwd)/lucenai/models:/app/lucenai/models \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/scripts:/app/scripts \
+  -v $(pwd)/notebooks:/app/notebooks \
+  -v $(pwd)/lucenai/config:/app/lucenai/config \
+  lucen-ia-train
+```
+
+### 🌐 Build and run the API
+
+```bash
+docker build -f Dockerfile.api -t sentiment-api .
+```
+
+Run with public Ngrok tunnel (requires .env):
+
+```bash
+docker run --rm --env-file .env -v $(pwd)/lucenai/models:/app/lucenai/models -p 8000:8000 sentiment-api
+```
+
+Sample request:
+
+```bash
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "Bitcoin is amazing"}'
+```
+
+#### 📄 .env file required
+Create a .env file with:
+```env
+NGROK_AUTH_TOKEN=your_token_here
+```
 
 ## 📚 Libraries Used
 

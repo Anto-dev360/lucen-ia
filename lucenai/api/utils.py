@@ -3,46 +3,45 @@ utils.py
 
 Helper functions for the LucenAI FastAPI interface.
 
-Includes:
-- Sentiment aggregation logic for batch tweet analysis.
-
 Author: Anthony Morin
 Created: 2025-07-14
 Project: lucen_ai
 License: MIT
 """
 
-from typing import List, Dict
-from lucenai.api.predict import predict_sentiment
+import logging
 
+from lucenai.config.settings import MODEL_PATHS
+from lucenai.training.model import load_best_model_and_tokenizer
 
-def aggregate_sentiment(texts: List[str]) -> Dict[str, float]:
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def load_inference_model():
     """
-    Aggregates sentiment predictions over a batch of tweet texts.
-
-    Each text is analyzed using the `predict_sentiment` function.
-    Results are classified as 'positive' or 'negative' and averaged.
-
-    Args:
-        texts (List[str]): List of raw tweet texts.
+    Loads the fine-tuned DistilBERT model and tokenizer from configured paths.
 
     Returns:
-        Dict[str, float]: A dictionary containing:
-            - "positive": Proportion of positive tweets (0 to 1)
-            - "negative": Proportion of negative tweets (0 to 1)
-            - "total": Total number of tweets analyzed
+        Tuple[tf.keras.Model, transformers.PreTrainedTokenizer]:
+            - The fine-tuned Keras model.
+            - The associated tokenizer.
+
+    Raises:
+        RuntimeError: If loading the model or tokenizer fails.
     """
-    results = [predict_sentiment(text) for text in texts]
-    total = len(results)
+    try:
+        logger.info(f"📥 Loading model from: {MODEL_PATHS.best_weights}")
+        logger.info(f"📥 Loading tokenizer from: {MODEL_PATHS.best_tokenizer}")
 
-    if total == 0:
-        return {"positive": 0.0, "negative": 0.0, "total": 0}
+        model, tokenizer = load_best_model_and_tokenizer(
+            model_path=MODEL_PATHS.best_weights,
+            tokenizer_path=MODEL_PATHS.best_tokenizer
+        )
 
-    positive = sum(1 for r in results if r.get("label") == "positive") / total
-    negative = sum(1 for r in results if r.get("label") == "negative") / total
+        logger.info("✅ Model and tokenizer loaded successfully.")
+        return model, tokenizer
 
-    return {
-        "positive": round(positive, 4),
-        "negative": round(negative, 4),
-        "total": total
-    }
+    except Exception as e:
+        logger.error(f"❌ Failed to load model/tokenizer: {e}")
+        raise RuntimeError(f"Could not load model/tokenizer: {e}")

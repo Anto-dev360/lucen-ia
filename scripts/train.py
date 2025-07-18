@@ -11,11 +11,14 @@ License: MIT
 """
 
 import argparse
+import logging
 import os
 import sys
+from typing import List, Optional
 
 # Reduce TensorFlow log level to warn
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 # import lucenai as a Python package
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -78,6 +81,10 @@ def main() -> None:
     # Configure display, GPU and seed
     configure_environment_for_nlp()
 
+    # Initialized for use across conditional branches
+    raw_test_texts: Optional[List[str]] = None
+    raw_test_labels: Optional[List[int]] = None
+
     # Model already exists and --force is not used
     if MODEL_PATHS.best_weights.exists() and not args.force:
         print(f"⚠️ Found existing model at: {MODEL_PATHS.best_root}")
@@ -125,6 +132,7 @@ def main() -> None:
     )
 
     # Final test evaluation of fine tuned model
+    assert raw_test_texts is not None and raw_test_labels is not None
     evaluate_model_on_test_set(best_model, tokenizer, raw_test_texts, raw_test_labels, output_dir=MODEL_PATHS.best_root)
 
     # Launch distillation if requested

@@ -17,7 +17,14 @@ from typing import List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow.data import Dataset
-from tensorflow.keras.callbacks import EarlyStopping, History, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.callbacks import (
+    CSVLogger,
+    EarlyStopping,
+    History,
+    ModelCheckpoint,
+    ReduceLROnPlateau,
+    TensorBoard,
+)
 from tensorflow.keras.models import Model
 from transformers import (
     DistilBertTokenizerFast,
@@ -32,7 +39,7 @@ try:
 except ImportError:
     TFA_AVAILABLE = False
 
-from lucenai.config.settings import CALLBACK_CONFIG, MODEL_PATHS, TRAINING_PARAMS
+from lucenai.config.settings import CALLBACK_CONFIG, LOGGING_PATHS, MODEL_PATHS, TRAINING_PARAMS
 
 
 def create_sentiment_model(
@@ -66,7 +73,7 @@ def create_sentiment_model(
     """
     print("🏗️ Building deep architecture...")
 
-    # Input layers: token IDs and attention mask
+    # Prepare input layers: token IDs and attention mask
     input_ids = tf.keras.Input(
         shape=(TRAINING_PARAMS.max_len,),
         dtype=tf.int32,
@@ -91,14 +98,20 @@ def create_sentiment_model(
     cls_token = sequence_output[:, 0, :]
     print("   ✅ [CLS] token extracted")
 
-    # Classification head
-    # First dense layer to reduce dimensionality and add non-linearity
+    """ Classification head """
+    # Projection layer: transform [CLS] embedding into high-level representation
     x = tf.keras.layers.Dense(256, activation='relu', name='dense_256')(cls_token)
-    # Dropout to prevent overfitting after the first dense layer
+    # Dropout to regularize large projection layer
     x = tf.keras.layers.Dropout(dropout_rate, name='dropout_1')(x)
+
+    # Intermediate abstraction layer with reduced dimensionality
     x = tf.keras.layers.Dense(128, activation='relu', name='dense_128')(x)
+    # Dropout to prevent overfitting
     x = tf.keras.layers.Dropout(dropout_rate, name='dropout_2')(x)
+
+    # Final compact layer before classification
     x = tf.keras.layers.Dense(64, activation='relu', name='dense_64')(x)
+    # Final dropout for robustness
     x = tf.keras.layers.Dropout(dropout_rate, name='dropout_3')(x)
 
     # Final classification layer with sigmoid for binary output
@@ -132,6 +145,19 @@ def build_model(transformer_model_name: str) -> tf.keras.Model:
         transformer_model_name,
         return_dict=True
     )
+
+    # Partial freezing: we freeze the first 4 layers of DistilBERT to preserve
+    # low-level linguistic features (like syntax) while still allowing the top layers
+    # to adapt to the specific sentiment classification task
+    transformer_layers = distilbert_model.distilbert.transformer.layer
+    for i, layer in enumerate(transformer_layers):
+        if i < 4:
+            layer.trainable = False
+
+    # 🔍 Affichage du statut trainable des couches
+    for i, layer in enumerate(transformer_layers):
+        status = "✅" if layer.trainable else "🔒"
+        print(f"{status} Layer {i} — trainable: {layer.trainable}")
 
     model, base_model = create_sentiment_model(distilbert_model)
 
@@ -185,9 +211,7 @@ def define_hyperparameters(use_extended_metrics: bool = False) -> Tuple[
     ]
 
     if use_extended_metrics:
-        print("➕ Extended metrics enabled:")
         metrics.append(tf.keras.metrics.AUC(name='auc'))
-
         if TFA_AVAILABLE:
             metrics.append(F1Score(num_classes=1, threshold=0.5, average='micro', name='f1_score'))
         else:
@@ -255,6 +279,8 @@ def get_callbacks() -> list:
     """
     print("📦 Initializing training callbacks...")
 
+    LOGGING_PATHS.clean_logs()
+
     callbacks = [
         EarlyStopping(
             monitor='val_loss',
@@ -275,8 +301,17 @@ def get_callbacks() -> list:
             save_best_only=True,
             save_weights_only=False,
             verbose=1
-        )
+        ),
+        TensorBoard(
+            log_dir=str(LOGGING_PATHS.tensorboard_log_dir),
+            histogram_freq=1,
+            write_graph=True,
+            write_images=False,
+        ),
+        CSVLogger(str(LOGGING_PATHS.csv_log_file), append=False)
     ]
+
+    print(f"✅ Callbacks ready: {[cb.__class__.__name__ for cb in callbacks]}")
 
     return callbacks
 
@@ -488,7 +523,8 @@ def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tup
     print(f"📦 Loading model weights from: {model_path}")
     try:
         status = model.load_weights(str(model_path))
-        status.expect_partial() 
+        if status is not None:
+            status.expect_partial()
         print("✅ Weights loaded successfully.")
     except Exception as e:
         raise RuntimeError(f"❌ Failed to load model weights: {e}")

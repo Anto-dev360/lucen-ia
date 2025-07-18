@@ -10,53 +10,25 @@ License: MIT
 """
 
 import logging
-from typing import Dict
+from typing import TypedDict, Dict, List
 
-import numpy as np
-import tensorflow as tf
+from lucenai.api.utils import load_inference_model
+from lucenai.training.preprocess import clean_text
+from lucenai.config.settings import LABELS, TRAINING_PARAMS, API_METADATA
 
-from lucenai.config.settings import MODEL_PATHS, TRAINING_PARAMS, LABELS
-from lucenai.training.model import load_best_model_and_tokenizer
-
-# === Configure logger ===
+# Configure logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Type representing the output of the sentiment prediction
+class PredictionResult(TypedDict):
+    label: str
+    score: float
 
-def load_model_and_tokenizer_safely():
-    """
-    Loads the fine-tuned DistilBERT model and tokenizer from configured paths.
+# Load model and tokenizer once at module level
+model, tokenizer = load_inference_model()
 
-    Returns:
-        Tuple[tf.keras.Model, transformers.PreTrainedTokenizer]:
-            - The fine-tuned Keras model.
-            - The associated tokenizer.
-
-    Raises:
-        RuntimeError: If loading the model or tokenizer fails.
-    """
-    try:
-        logger.info(f"📥 Loading model from: {MODEL_PATHS.best_weights}")
-        logger.info(f"📥 Loading tokenizer from: {MODEL_PATHS.best_tokenizer}")
-
-        model, tokenizer = load_best_model_and_tokenizer(
-            model_path=MODEL_PATHS.best_weights,
-            tokenizer_path=MODEL_PATHS.best_tokenizer
-        )
-
-        logger.info("✅ Model and tokenizer loaded successfully.")
-        return model, tokenizer
-
-    except Exception as e:
-        logger.error(f"❌ Failed to load model/tokenizer: {e}")
-        raise RuntimeError(f"Could not load model/tokenizer: {e}")
-
-
-# === Load model and tokenizer once at module level ===
-model, tokenizer = load_model_and_tokenizer_safely()
-
-
-def predict_sentiment(text: str) -> Dict[str, float]:
+def predict_sentiment(text: str) -> PredictionResult:
     """
     Predict the sentiment of a given input text using the fine-tuned DistilBERT model.
 
@@ -76,9 +48,9 @@ def predict_sentiment(text: str) -> Dict[str, float]:
         text (str): The raw input text to classify.
 
     Returns:
-        Dict[str, float]: A dictionary with:
-            - "label": The predicted sentiment label ("positive", "negative", or "invalid").
-            - "score": The model's confidence score for the predicted label, rounded to 4 decimal places.
+        PredictionResult: A dictionary with:
+            - "label": The predicted sentiment ("positive", "negative", or "invalid")
+            - "score": Confidence score (float between 0 and 1, rounded to 4 decimals)
 
     Raises:
         RuntimeError: If the prediction process fails due to model or tokenizer errors.
@@ -86,10 +58,13 @@ def predict_sentiment(text: str) -> Dict[str, float]:
     try:
         if not text.strip():
             logger.warning("⚠️ Empty input received for prediction.")
-            return {"label": LABELS.INVALID, "score": 0.0}
+            return {"label": LABELS.invalid, "score": 0.0}
+
+        # Apply same text cleaning as during training phase
+        cleaned_text = clean_text(text)
 
         inputs = tokenizer(
-            text,
+            cleaned_text,
             return_tensors="tf",
             truncation=True,
             padding="max_length",
@@ -98,9 +73,9 @@ def predict_sentiment(text: str) -> Dict[str, float]:
 
         logits = model(inputs, training=False)
         score = float(logits.numpy()[0][0])  # Single output due to sigmoid
-        label = LABELS.POSITIVE if score >= 0.5 else LABELS.NEGATIVE
+        label = LABELS.positive if score >= API_METADATA.threshold else LABELS.negative
 
-        logger.debug(f"📝 Input: {text}")
+        logger.debug(f"📝 Input: {text} (cleaned: {cleaned_text})")
         logger.debug(f"📈 Sigmoid score: {score:.4f}")
         logger.debug(f"🏷️ Predicted label: {label}")
 
@@ -109,3 +84,35 @@ def predict_sentiment(text: str) -> Dict[str, float]:
     except Exception as e:
         logger.error(f"❌ Inference failed: {e}")
         raise RuntimeError(f"Prediction failed: {e}")
+
+
+def aggregate_sentiment(texts: List[str]) -> Dict[str, float]:
+    """
+    Aggregates sentiment predictions over a batch of tweet texts.
+
+    Each text is analyzed using the `predict_sentiment` function.
+    Results are classified as 'positive' or 'negative' and averaged.
+
+    Args:
+        texts (List[str]): List of raw tweet texts.
+
+    Returns:
+        Dict[str, float]: A dictionary containing:
+            - "positive": Proportion of positive tweets (0 to 1)
+            - "negative": Proportion of negative tweets (0 to 1)
+            - "total": Total number of tweets analyzed
+    """
+    results = [predict_sentiment(text) for text in texts]
+    total = len(results)
+
+    if total == 0:
+        return {"positive": 0.0, "negative": 0.0, "total": 0}
+
+    positive = sum(1 for r in results if r.get("label") == "positive") / total
+    negative = sum(1 for r in results if r.get("label") == "negative") / total
+
+    return {
+        "positive": round(positive, 4),
+        "negative": round(negative, 4),
+        "total": total
+    }
