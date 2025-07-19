@@ -137,7 +137,7 @@ LABELS = SentimentLabels()
 class APIMetadata:
     title: str = "API d'analyse de sentiment"
     version: str = "1.0"
-    threshold: float = 0.55
+    threshold: float = 0.27
     description: str = field(init=False)
 
     def __post_init__(self):

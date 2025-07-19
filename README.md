@@ -359,8 +359,8 @@ curl -X POST "http://localhost:8000/predict" \
      -d '{"text": "Bitcoin is amazing"}'
 ```
 
-#### 📄 .env file required
-Create a .env file with:
+#### 📄 Ngrok .env file
+Create an account on [ngrok.com](https://ngrok.com), then add your token to the .env file:
 ```env
 NGROK_AUTH_TOKEN=your_token_here
 ```

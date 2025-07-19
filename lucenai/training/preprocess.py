@@ -36,7 +36,7 @@ def load_and_preprocess_dataset(return_test: bool = False):
     """
     print("📥 Loading dataset...")
     try:
-        df = pd.read_csv(DATA_PATHS.raw_dataset)
+        df = pd.read_csv(DATA_PATHS.raw_dataset, encoding="utf-8")
     except FileNotFoundError:
         raise FileNotFoundError(f"❌ Dataset file not found at path: {DATA_PATHS.raw_dataset}")
     except pd.errors.ParserError:
@@ -89,20 +89,37 @@ def clean_and_encode_labels(df: pd.DataFrame) -> pd.DataFrame:
 
 def clean_text(text: str) -> str:
     """
-    Basic text cleaning: remove URLs, mentions, hashtags, special characters and retweet prefix.
+    Clean tweet text by removing noise and preserving key sentiment indicators.
+
+    Steps:
+    - Remove URLs, mentions, hashtags, and HTML artifacts.
+    - Convert percentage values (e.g., -4.5%) to text form (e.g., -4.5 percent), preserving signs.
+    - Remove standalone "rt" and unwanted special characters.
+    - Keep emojis and numeric signs (+/-) only when relevant.
+    - Normalize whitespace and convert to lowercase.
 
     Args:
-        text (str): Input tweet.
+        text (str): Raw tweet text.
 
     Returns:
-        str: Cleaned lowercase text.
+        str: Cleaned, lowercase text with emojis and numeric sentiment preserved.
     """
-    text = re.sub(r"http\S+|@\S+|#[A-Za-z0-9_]+", "", text)  # Remove URLs, mentions, hashtags
-    text = re.sub(r"[^A-Za-z0-9\s]", "", text)               # Remove non-alphanumerics
-    text = re.sub(r"\brt\b", "", text, flags=re.IGNORECASE)  # Remove "rt" as standalone word
-    text = text.replace("amp", "")                           # Remove HTML artifact
-    text = re.sub(r"\s+", " ", text)                         # Normalize whitespace
-    return text.lower().strip()
+    text = re.sub(r"http\S+|@\S+|#[A-Za-z0-9_]+", "", text)         # Remove URLs, mentions, hashtags
+    text = re.sub(r"([-+]?\d+(?:\.\d+)?)%", r"\1 percent", text)    # Convert % values, keep sign
+    text = re.sub(r"\brt\b", "", text, flags=re.IGNORECASE)         # Remove standalone "rt"
+    text = text.replace("amp", "")                                  # Remove HTML artifact "amp"
+
+    # Remove special chars except letters, numbers, emojis, +/-
+    text = re.sub(r"[^\w\s\.\-\+"
+                  "\U0001F600-\U0001F64F"                           # Emojis
+                  "\U0001F300-\U0001F5FF"                           # Symbols & pictographs
+                  "\U0001F680-\U0001F6FF"                           # Transport & map
+                  "\U0001F1E0-\U0001F1FF"                           # Flags
+                  "]", "", text)
+
+    text = re.sub(r"(?<!\d)[+-](?!\d)", "", text)                   # Remove + / - not in numbers
+    text = re.sub(r"\s+", " ", text)                                # Normalize whitespace
+    return text.lower().strip()                                     # Lowercase and trim
 
 
 def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
