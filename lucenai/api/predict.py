@@ -10,23 +10,28 @@ License: MIT
 """
 
 import logging
-from typing import TypedDict, Dict, List
+from typing import Dict, List, TypedDict
 
-from lucenai.api.utils import load_inference_model
+from lucenai.api.utils import load_inference_model, load_and_fit_calibrator
+from lucenai.config.settings import API_METADATA, LABELS, TRAINING_PARAMS
 from lucenai.training.preprocess import clean_text
-from lucenai.config.settings import LABELS, TRAINING_PARAMS, API_METADATA
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Type representing the output of the sentiment prediction
+
 class PredictionResult(TypedDict):
+    """
+    Type representing the output of the sentiment prediction
+    """
     label: str
     score: float
 
 # Load model and tokenizer once at module level
 model, tokenizer = load_inference_model()
+# Fit probability calibrator using validation predictions
+load_and_fit_calibrator()
 
 def predict_sentiment(text: str) -> PredictionResult:
     """

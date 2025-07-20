@@ -19,7 +19,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import LambdaCallback
 from transformers import DistilBertTokenizerFast, PreTrainedTokenizerBase
 
-from lucenai.config.settings import DISTILATION_PARAMS, MODEL_PATHS, TRAINING_PARAMS
+from lucenai.config.settings import DISTILLATION_PARAMS, MODEL_PATHS, TRAINING_PARAMS
 from lucenai.training.evaluation import evaluate_model_on_test_set
 from lucenai.training.model import save_model_and_tokenizer
 
@@ -35,7 +35,13 @@ class DistillationModel(tf.keras.Model):
         temperature (float): Temperature parameter for softening the logits.
         alpha (float): Weight to balance student loss and distillation loss.
     """
-    def __init__(self, student, teacher, temperature=DISTILATION_PARAMS.temperature, alpha=DISTILATION_PARAMS.alpha):
+    def __init__(
+        self,
+        student: tf.keras.Model,
+        teacher: tf.keras.Model,
+        temperature: float = DISTILLATION_PARAMS.temperature,
+        alpha: float = DISTILLATION_PARAMS.alpha,
+    ):
         super().__init__()
         self.student_model = student
         self.teacher_model = teacher
@@ -52,16 +58,27 @@ class DistillationModel(tf.keras.Model):
         self.accuracy_tracker = tf.keras.metrics.BinaryAccuracy(name="accuracy")
         print(f"🧪 Using distillation params: α={self.alpha}, T={self.temperature}")
 
-    def compile(self, optimizer):
+    def compile(self, optimizer: tf.keras.optimizers.Optimizer) -> None:
         """
-        Compile model with a single optimizer.
+        Compile model with a given optimizer.
         """
         super().compile()
         self.optimizer = optimizer
 
-    def train_step(self, data):
+    def train_step(self, data: tuple[tf.Tensor, tf.Tensor]) -> dict[str, tf.Tensor]:
         """
-        Custom training step including knowledge distillation for binary classification.
+        Performs one training step for the student model using knowledge distillation.
+
+        This step combines:
+        - A supervised loss between student predictions and true labels (binary crossentropy),
+        - A distillation loss (KL divergence) between student and teacher softened outputs.
+
+        The final loss is a weighted sum:
+            total_loss = alpha * supervised_loss + (1 - alpha) * distillation_loss
+
+        Returns:
+            dict[str, tf.Tensor]: Dictionary of tracked metrics including total loss,
+            student loss, distillation loss, and accuracy.
         """
         x, y = data
 
@@ -106,9 +123,9 @@ class DistillationModel(tf.keras.Model):
             "accuracy": self.accuracy_tracker.result(),
         }
 
-    def test_step(self, data):
+    def test_step(self, data: tuple[tf.Tensor, tf.Tensor]) -> dict[str, tf.Tensor]:
         """
-        Custom test step evaluating the student model.
+        Custom evaluation step for student model.
         """
         x, y = data
         student_logits = self.student_model(x, training=False)
@@ -142,23 +159,23 @@ class DistillationModel(tf.keras.Model):
             self.accuracy_tracker,
         ]
 
-    def build(self, input_shape):
+    def build(self, input_shape: tuple[int, ...]) -> None:
         """
-        Builds the underlying student model so that summary() can be used.
+        Build the model with a given input shape (e.g., for summary()).
         """
         self.student_model.build(input_shape)
         super().build(input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor, training: bool = False) -> tf.Tensor:
         """
         Forward pass through the student model.
         """
         return self.student_model(inputs)
 
 
-def create_student_model(vocab_size: int = DISTILATION_PARAMS.vocab_size,
-                         embedding_dim: int = DISTILATION_PARAMS.embedding_dim,
-                         dropout_rate: float = DISTILATION_PARAMS.dropout_rate,
+def create_student_model(vocab_size: int = DISTILLATION_PARAMS.vocab_size,
+                         embedding_dim: int = DISTILLATION_PARAMS.embedding_dim,
+                         dropout_rate: float = DISTILLATION_PARAMS.dropout_rate,
                          max_len: int = TRAINING_PARAMS.max_len) -> tf.keras.Model:
     """
     Builds a lightweight student model using an embedding layer followed by average pooling
@@ -246,7 +263,7 @@ def train_evaluate_student_model(
     distill_model = DistillationModel(student=student, teacher=teacher_model)
 
     optimizer = tf.keras.optimizers.Adam(
-        learning_rate=DISTILATION_PARAMS.learning_rate
+        learning_rate=DISTILLATION_PARAMS.learning_rate
     )
     distill_model.compile(optimizer=optimizer)
 
@@ -270,7 +287,7 @@ def train_evaluate_student_model(
     distill_model.fit(
         train_dataset,
         validation_data=val_dataset,
-        epochs=DISTILATION_PARAMS.epochs,
+        epochs=DISTILLATION_PARAMS.epochs,
         callbacks = callbacks
     )
     end_time = time.time()

@@ -20,10 +20,13 @@ License: MIT
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Union
 
 import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 import tensorflow as tf
+from tensorflow.data import Dataset
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -36,7 +39,7 @@ from sklearn.metrics import (
 )
 from transformers import PreTrainedTokenizerBase
 
-from lucenai.config.settings import TRAINING_PARAMS
+from lucenai.config.settings import TRAINING_PARAMS, MODEL_PATHS
 
 
 def evaluate_model_on_test_set(
@@ -140,3 +143,37 @@ def evaluate_model_on_test_set(
     plt.tight_layout()
     plt.savefig(output_dir / "roc_curve.png")
     print(f"🖼️ ROC curve saved: {output_dir / 'roc_curve.png'}")
+
+
+def save_calibration_data(
+    model: tf.keras.Model,
+    val_dataset: Dataset,
+    output_path: Union[str, Path] = MODEL_PATHS.base / "calibration_data.csv"
+) -> None:
+    """
+    Saves the predicted probabilities and true labels from the validation dataset
+    for use in post-hoc probability calibration (e.g. isotonic regression).
+
+    Args:
+        model (tf.keras.Model): Trained model to generate predictions.
+        val_dataset (tf.data.Dataset): Batched validation dataset.
+        output_path (str or Path): CSV output path for calibration data.
+    """
+    print("📦 Saving validation predictions for calibration...")
+
+    # Predict probabilities on validation set
+    val_probs = model.predict(val_dataset).squeeze()
+    val_labels = np.concatenate([y.numpy() for _, y in val_dataset])
+
+    # Create DataFrame
+    df = pd.DataFrame({
+        "prob": val_probs,
+        "label": val_labels
+    })
+
+    # Save to disk
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+
+    print(f"✅ Calibration data saved to: {output_path}")

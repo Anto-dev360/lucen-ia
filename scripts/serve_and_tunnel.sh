@@ -63,7 +63,6 @@ if [[ -z "$PUBLIC_URL" ]]; then
   echo "❌ Failed to retrieve Ngrok public URL."
 else
   echo "✅ Public URL: $PUBLIC_URL"
-  echo "🚀 FastAPI est accessible publiquement ici : $PUBLIC_URL"
 fi
 
 wait

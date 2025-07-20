@@ -19,6 +19,7 @@ import nltk
 import pandas as pd
 from nltk.corpus import wordnet
 from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 
 from lucenai.config.settings import DATA_PATHS, TRAINING_PARAMS
 
@@ -159,19 +160,38 @@ def remove_empty_texts(df: pd.DataFrame) -> pd.DataFrame:
 
 def balance_classes(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Balances the dataset by undersampling the majority class.
+    Balances the dataset by upsampling the minority class.
 
     Args:
-        df (pd.DataFrame): Input DataFrame with 'label' column
+        df (pd.DataFrame): Input DataFrame containing a 'label' column 
+                           with binary classes (0 and 1).
 
     Returns:
-        pd.DataFrame: Balanced DataFrame
+        pd.DataFrame: A balanced DataFrame with equal number of samples 
+                      for each class, created by oversampling the minority class.
     """
-    min_count = df['label'].value_counts().min()
-    df_balanced = pd.concat([
-        df[df['label'] == 0].sample(min_count, random_state=TRAINING_PARAMS.seed),
-        df[df['label'] == 1].sample(min_count, random_state=TRAINING_PARAMS.seed)
-    ]).sample(frac=1, random_state=TRAINING_PARAMS.seed).reset_index(drop=True)
+    # Separate majority and minority classes
+    majority_class = df['label'].value_counts().idxmax()
+    minority_class = 1 - majority_class
+
+    df_majority = df[df['label'] == majority_class]
+    df_minority = df[df['label'] == minority_class]
+
+    # Upsample the minority class to match the majority class
+    df_minority_upsampled = resample(
+        df_minority,
+        replace=True,  # sample with replacement
+        n_samples=len(df_majority),
+        random_state=TRAINING_PARAMS.seed
+    )
+
+    # Combine and shuffle the dataset
+    df_balanced = pd.concat([df_majority, df_minority_upsampled])
+    df_balanced = (
+        df_balanced.sample(frac=1, random_state=TRAINING_PARAMS.seed)
+        .reset_index(drop=True)
+    )
+
     return df_balanced
 
 

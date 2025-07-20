@@ -26,6 +26,7 @@ from tensorflow.keras.callbacks import (
     TensorBoard,
 )
 from tensorflow.keras.models import Model
+from tqdm.keras import TqdmCallback
 from transformers import (
     DistilBertTokenizerFast,
     PreTrainedTokenizerFast,
@@ -40,6 +41,7 @@ except ImportError:
     TFA_AVAILABLE = False
 
 from lucenai.config.settings import CALLBACK_CONFIG, LOGGING_PATHS, MODEL_PATHS, TRAINING_PARAMS
+from lucenai.training.evaluation import save_calibration_data, evaluate_model_on_test_set
 
 
 def create_sentiment_model(
@@ -308,7 +310,8 @@ def get_callbacks() -> list:
             write_graph=True,
             write_images=False,
         ),
-        CSVLogger(str(LOGGING_PATHS.csv_log_file), append=False)
+        CSVLogger(str(LOGGING_PATHS.csv_log_file), append=False),
+        TqdmCallback(verbose=1)
     ]
 
     print(f"✅ Callbacks ready: {[cb.__class__.__name__ for cb in callbacks]}")
@@ -433,7 +436,9 @@ def training_summary(history: History, export_path: Optional[str] = None) -> Non
 def train_distilbert_model(
     train_dataset: Dataset,
     val_dataset: Dataset,
-    tokenizer: PreTrainedTokenizerFast
+    tokenizer: PreTrainedTokenizerFast,
+    test_texts: List[str],
+    test_labels: List[int]
 ) -> None:
     """
     Full training pipeline wrapper to build, compile, train and save the model.
@@ -454,6 +459,18 @@ def train_distilbert_model(
 
     # Start training.
     model, history = launch_model_training(model, train_dataset, val_dataset)
+
+    # Save validation predictions for optional post-hoc calibration
+    save_calibration_data(model, val_dataset)
+
+    # Final test evaluation of fine tuned model
+    evaluate_model_on_test_set(
+        model,
+        tokenizer,
+        test_texts,
+        test_labels,
+        output_dir=MODEL_PATHS.best_root
+    )
 
     # Print training statistics
     training_summary(history)
@@ -487,9 +504,13 @@ def save_model_and_tokenizer(model, tokenizer, save_path: Path = MODEL_PATHS.bas
     print(f"✅ Tokenizer saved to: {tokenizer_dir}")
 
 
-def load_best_model_and_tokenizer(model_path: Path, tokenizer_path: Path) -> Tuple[tf.keras.Model, DistilBertTokenizerFast]:
+def load_best_model_and_tokenizer(
+    model_path: Path,
+    tokenizer_path: Path
+) -> Tuple[tf.keras.Model, DistilBertTokenizerFast]:
     """
-    Reconstructs the DistilBERT sentiment classification model and loads saved weights and tokenizer.
+    Reconstructs the DistilBERT sentiment classification model and loads saved
+    weights and tokenizer.
 
     This function:
     - Rebuilds the model architecture from scratch using the same pretrained base (DistilBERT).

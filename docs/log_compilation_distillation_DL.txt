@@ -1,0 +1,308 @@
+⚡ main ~/lucen-ia docker run --rm --gpus all \
+>   -v $(pwd)/lucenai/models:/app/lucenai/models \
+>   -v $(pwd)/data:/app/data \
+>   -v $(pwd)/scripts:/app/scripts \
+>   -v $(pwd)/notebooks:/app/notebooks \
+>   -v $(pwd)/lucenai/config:/app/lucenai/config \
+>   lucen-ia-train
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 11.8.0
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+/usr/local/lib/python3.10/dist-packages/tensorflow_addons/utils/tfa_eol_msg.py:23: UserWarning: 
+
+TensorFlow Addons (TFA) has ended development and introduction of new features.
+TFA has entered a minimal maintenance and release mode until a planned end of life in May 2024.
+Please modify downstream libraries to take dependencies from other repositories in our TensorFlow community (e.g. Keras, Keras-CV, and Keras-NLP). 
+
+For more information see: https://github.com/tensorflow/addons/issues/2807 
+
+  warnings.warn(
+[nltk_data] Downloading package wordnet to /root/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+[nltk_data] Downloading package omw-1.4 to /root/nltk_data...
+[nltk_data]   Package omw-1.4 is already up-to-date!
+Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFDistilBertModel: ['vocab_layer_norm.bias', 'vocab_transform.bias', 'vocab_projector.bias', 'vocab_layer_norm.weight', 'vocab_transform.weight']
+- This IS expected if you are initializing TFDistilBertModel from a PyTorch model trained on another task or with another architecture (e.g. initializing a TFBertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing TFDistilBertModel from a PyTorch model that you expect to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model).
+All the weights of TFDistilBertModel were initialized from the PyTorch model.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use TFDistilBertModel for predictions without further training.
+✅ GPU successfully configured: /physical_device:GPU:0
+🧠 GPU memory growth enabled
+🔁 Reproducibility seed set to 42
+📥 Loading dataset...
+🧹 Removed 19533 duplicate entries.
+🧹 Removed 1 empty entries.
+🧪 Data augmentation: added 1997 synthetic samples.
+✅ Class distribution after split:
+Train:label
+1    0.5
+0    0.5
+Name: proportion, dtype: float64
+Val:label
+0    0.5
+1    0.5
+Name: proportion, dtype: float64
+Test:label
+0    0.5
+1    0.5
+Name: proportion, dtype: float64
+🔍 Sample of training data (first 10 rows):
+
+ 1. 📄 Text: bitcoin better fucking go up rn lol
+    🏷️ Label: 1
+
+ 2. 📄 Text: guardian and like issue its 2018 if you want more donation heres what you
+    🏷️ Label: 1
+
+ 3. 📄 Text: call decide our animal several effort explain possible with education across
+    🏷️ Label: 0
+
+ 4. 📄 Text: is based on . a public ledger of transactions thats safe huge potential to be future currency.
+    🏷️ Label: 1
+
+ 5. 📄 Text: blockchain is the tech. bitcoin is merely the first mainstream manifestation of its potential. marc kenigsberg
+    🏷️ Label: 0
+
+ 6. 📄 Text: there is so much happening in we are literally changing the world right now
+    🏷️ Label: 1
+
+ 7. 📄 Text: new airdrop 📢 ai personal health
+    🏷️ Label: 1
+
+ 8. 📄 Text: current prices on at 8645 down -4.7 percent. at 537 down -5.8 percent. at 0.6
+    🏷️ Label: 0
+
+ 9. 📄 Text: the responses to this thread are so sad. satoshi could have never been a woman grow up. its 2018 and 50 percent of ou
+    🏷️ Label: 0
+
+10. 📄 Text: buy bitcoin bitcoin cash monero zcash or litecoin. first they came for wikileaks. then they came for our guns.
+    🏷️ Label: 1
+
+📦 Loading tokenizer...
+📄 Tokenizing training and validation sets...
+🧠 Loading pretrained DistilBERT model...
+🔒 Layer 0 — trainable: False
+🔒 Layer 1 — trainable: False
+🔒 Layer 2 — trainable: False
+🔒 Layer 3 — trainable: False
+✅ Layer 4 — trainable: True
+✅ Layer 5 — trainable: True
+🏗️ Building deep architecture...
+   ✅ Input layers created
+   ✅ DistilBERT integrated
+   ✅ [CLS] token extracted
+   ✅ Deep classification head added
+
+✅ Model successfully built!
+
+📊 Model Summary:
+   🔢 Total trainable parameters: 38,249,473
+   🎯 Task: Binary sentiment classification
+   📏 Input length: 64 tokens
+   🎲 Dropout rate: 0.4
+📋 Fine-tuned model detailed architecture
+════════════════════════════════════════════════════════════════════════════════
+Model: "DistilBERT_Sentiment_Classifier"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_ids (InputLayer)      [(None, 64)]                 0         []                            
+                                                                                                  
+ attention_mask (InputLayer  [(None, 64)]                 0         []                            
+ )                                                                                                
+                                                                                                  
+ tf_distil_bert_model (TFDi  TFBaseModelOutput(last_hid   6636288   ['input_ids[0][0]',           
+ stilBertModel)              den_state=(None, 64, 768),   0          'attention_mask[0][0]']      
+                              hidden_states=None, atten                                           
+                             tions=None)                                                          
+                                                                                                  
+ tf.__operators__.getitem (  (None, 768)                  0         ['tf_distil_bert_model[0][0]']
+ SlicingOpLambda)                                                                                 
+                                                                                                  
+ dense_256 (Dense)           (None, 256)                  196864    ['tf.__operators__.getitem[0][
+                                                                    0]']                          
+                                                                                                  
+ dropout_1 (Dropout)         (None, 256)                  0         ['dense_256[0][0]']           
+                                                                                                  
+ dense_128 (Dense)           (None, 128)                  32896     ['dropout_1[0][0]']           
+                                                                                                  
+ dropout_2 (Dropout)         (None, 128)                  0         ['dense_128[0][0]']           
+                                                                                                  
+ dense_64 (Dense)            (None, 64)                   8256      ['dropout_2[0][0]']           
+                                                                                                  
+ dropout_3 (Dropout)         (None, 64)                   0         ['dense_64[0][0]']            
+                                                                                                  
+ classifier (Dense)          (None, 1)                    65        ['dropout_3[0][0]']           
+                                                                                                  
+==================================================================================================
+Total params: 66600961 (254.06 MB)
+Trainable params: 38249473 (145.91 MB)
+Non-trainable params: 28351488 (108.15 MB)
+__________________________________________________________________________________________________
+════════════════════════════════════════════════════════════════════════════════
+⚙️ Configuring training hyperparameters...
+
+📊 Tracking metrics:
+   • accuracy
+   • precision
+   • recall
+   • auc
+   • f1_score
+🔧 Compiling model...
+
+✅ Model compiled successfully!
+
+📋 Final configuration:
+   🎯 Task: Binary sentiment classification
+   🧠 Architecture: DistilBERT + classification head
+   📊 Trainable parameters: 66,600,961
+   ⚡ Optimizer: Adam
+372/372 [==============================] - ETA: 0s - loss: 0.0214 - accuracy: 0.9950 - precision: 0.9960 - recall: 0.9941 - auc: 0.9991 - f1_score: 0.9950Restoring model weights from the end of the best epoch: 6.
+100%|██████████| 372/372 [00:22<00:00, 16.8batch/s, loss=0.0214, accuracy=0.995, precision=0.996, recall=0.994, auc=0.999, f1_score=0.995] f1_score: 1.00004
+Epoch 8: val_loss did not improve from 0.11868tch/s, loss=0.00772, accuracy=1, precision=1, recall=1, auc=1, f1_score=1]00 - auc: 1.0000 - f1_score: 1.0000.9919 - val_loss: 0.1192 - val_accuracy: 0.9738 - val_pre
+372/372 [==============================] - 28s 75ms/step - loss: 0.0214 - accuracy: 0.9950 - precision: 0.9960 - recall: 0.9941 - auc: 0.9991 - f1_score: 0.9950 - val_loss: 0.1397 - val_accuracy: 0.9715 - val_precision: 0.9890 - val_recall: 0.9535 - val_auc: 0.9875 - val_f1_score: 0.9709 - lr: 2.0000e-05ecall=1, auc=1, f1_score=1]00 - auc: 1.0000 - f1_score: 1.00008
+Epoch 8: early stopping72 [00:00<00:21, 17.4batch/s, loss=0.00813, accuracy=1, precision=1, recall=1, auc=1, f1_score=1]00 - auc: 1.0000 - f1_score: 1.00004
+ 80%|████████  | 8/10 [06:18<01:34, 47.34s/epoch, loss=0.0214, accuracy=0.995, precision=0.996, recall=0.994, auc=0.999, f1_score=0.995, val_loss=0.14, val_accuracy=0.971, val_precision=0.989, val_recall=0.954, val_auc=0.988, val_f1_score=0.971, lr=2e-5]                                                                                                - f1_score: 0.2857   
+Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFDistilBertModel: ['vocab_layer_norm.bias', 'vocab_transform.bias', 'vocab_projector.bias', 'vocab_layer_norm.weight', 'vocab_transform.weight'] 2.00/372 [00:16<43:20, 7.03s/batch, loss=0.766, accuracy=0.453, precision=0.438, recall=0.212, auc=0.5, f1_score=0.286]  
+- This IS expected if you are initializing TFDistilBertModel from a PyTorch model trained on another task or with another architecture (e.g. initializing a TFBertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing TFDistilBertModel from a PyTorch model that you expect to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model).
+All the weights of TFDistilBertModel were initialized from the PyTorch model.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use TFDistilBertModel for predictions without further training.
+✅ Training finished! (6.3 minutes)
+📊 Training Summary
+
+🎯 Final performance:
+   📈 Training accuracy: 0.9950 (99.50%)
+   ✅ Validation accuracy: 0.9715 (97.15%)
+   📉 Training loss: 0.0214
+   📊 Validation loss: 0.1397
+
+🔍 Overfitting analysis:
+   ✅ Well balanced (gap: 0.0236)
+
+🏆 Best epoch:
+   📊 Epoch: 7/8
+   🎯 Validation accuracy: 0.9738 (97.38%)
+   🌟 Excellent performance!
+
+📈 Additional metrics:
+   • precision: 0.9960
+   • recall: 0.9941
+   • auc: 0.9991
+   • f1_score: 0.9950
+   • val_precision: 0.9890
+   • val_recall: 0.9535
+   • val_auc: 0.9875
+   • val_f1_score: 0.9709
+   • lr: 0.0000
+💾 Saving model to: /app/lucenai/models/distilbert_sentiment
+✅ Model weights saved to: /app/lucenai/models/distilbert_sentiment/checkpoint/weights
+✅ Tokenizer saved to: /app/lucenai/models/distilbert_sentiment/tokenizer
+📥 Loading tokenizer from: /app/lucenai/models/distilbert_sentiment/tokenizer
+✅ Tokenizer loaded successfully.
+🧠 Rebuilding model architecture...
+🏗️ Building deep architecture...
+   ✅ Input layers created
+   ✅ DistilBERT integrated
+   ✅ [CLS] token extracted
+   ✅ Deep classification head added
+
+✅ Model successfully built!
+📦 Loading model weights from: /app/lucenai/models/distilbert_sentiment/checkpoint/best_model
+✅ Weights loaded successfully.
+🧪 Evaluating model on test set...
+
+54/54 [==============================] - 3s 19ms/step
+📊 Test Performance:
+   ✅ Accuracy : 0.9682
+   🎯 Precision: 0.9761
+   🔁 Recall   : 0.9600
+   🧠 F1 Score : 0.9680
+   🧬 ROC AUC  : 0.9916
+
+💾 Report saved: /app/lucenai/models/distilbert_sentiment/test_report.json
+🖼️ Confusion matrix saved: /app/lucenai/models/distilbert_sentiment/confusion_matrix.png
+🖼️ ROC curve saved: /app/lucenai/models/distilbert_sentiment/roc_curve.png
+
+🔥 Starting distillation pipeline...
+📦 Tokenize data for student...
+🎓 Creating student model...
+📋 Distilled model detailed architecture
+════════════════════════════════════════════════════════════════════════════════
+Model: "StudentModel"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_ids (InputLayer)      [(None, 64)]                 0         []                            
+                                                                                                  
+ embedding (Embedding)       (None, 64, 64)               1953408   ['input_ids[0][0]']           
+                                                                                                  
+ avg_pool (GlobalAveragePoo  (None, 64)                   0         ['embedding[0][0]']           
+ ling1D)                                                                                          
+                                                                                                  
+ dense_64 (Dense)            (None, 64)                   4160      ['avg_pool[0][0]']            
+                                                                                                  
+ dropout_1 (Dropout)         (None, 64)                   0         ['dense_64[0][0]']            
+                                                                                                  
+ dense_32 (Dense)            (None, 32)                   2080      ['dropout_1[0][0]']           
+                                                                                                  
+ dropout_2 (Dropout)         (None, 32)                   0         ['dense_32[0][0]']            
+                                                                                                  
+ attention_mask (InputLayer  [(None, 64)]                 0         []                            
+ )                                                                                                
+                                                                                                  
+ classifier (Dense)          (None, 1)                    33        ['dropout_2[0][0]']           
+                                                                                                  
+==================================================================================================
+Total params: 1959681 (7.48 MB)
+Trainable params: 1959681 (7.48 MB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
+════════════════════════════════════════════════════════════════════════════════
+🧠 Wrapping in DistillationModel...
+🧪 Using distillation params: α=0.3, T=1.0
+🚀 Starting student training with distillation...
+Epoch 1/5
+372/372 [==============================] - ETA: 0s - loss: 0.2103 - student_loss: 0.6860 - distillation_loss: 0.0064 - accuracy: 0.5000[Epoch 1] 🔍 Sample student preds (sigmoid): [0.525844   0.52903503 0.525797   0.5305745  0.5210692  0.5293418
+372/372 [==============================] - 34s 79ms/step - loss: 0.2103 - student_loss: 0.6860 - distillation_loss: 0.0064 - accuracy: 0.5000 - val_loss: 0.6673 - val_accuracy: 0.5000
+Epoch 2/5
+372/372 [==============================] - ETA: 0s - loss: 0.1934 - student_loss: 0.6314 - distillation_loss: 0.0057 - accuracy: 0.5000[Epoch 2] 🔍 Sample student preds (sigmoid): [0.56072783 0.6002218  0.57108873 0.6101108  0.57635885 0.61215293
+372/372 [==============================] - 8s 22ms/step - loss: 0.1934 - student_loss: 0.6314 - distillation_loss: 0.0057 - accuracy: 0.5000 - val_loss: 0.5557 - val_accuracy: 0.5000
+Epoch 3/5
+370/372 [============================>.] - ETA: 0s - loss: 0.1665 - student_loss: 0.5438 - distillation_loss: 0.0048 - accuracy: 0.5000[Epoch 3] 🔍 Sample student preds (sigmoid): [0.5661182  0.67537594 0.57881045 0.70189846 0.66748583 0.7039377
+372/372 [==============================] - 8s 22ms/step - loss: 0.1665 - student_loss: 0.5438 - distillation_loss: 0.0048 - accuracy: 0.5000 - val_loss: 0.4723 - val_accuracy: 0.5000
+Epoch 4/5
+370/372 [============================>.] - ETA: 0s - loss: 0.1445 - student_loss: 0.4724 - distillation_loss: 0.0040 - accuracy: 0.5000[Epoch 4] 🔍 Sample student preds (sigmoid): [0.5820087  0.76402354 0.5549813  0.78699064 0.7711205  0.7873353
+372/372 [==============================] - 8s 22ms/step - loss: 0.1445 - student_loss: 0.4723 - distillation_loss: 0.0040 - accuracy: 0.5000 - val_loss: 0.3976 - val_accuracy: 0.5000
+Epoch 5/5
+370/372 [============================>.] - ETA: 0s - loss: 0.1209 - student_loss: 0.3955 - distillation_loss: 0.0032 - accuracy: 0.5000[Epoch 5] 🔍 Sample student preds (sigmoid): [0.58250695 0.8343234  0.46357232 0.8529274  0.8401969  0.850654
+372/372 [==============================] - 8s 22ms/step - loss: 0.1208 - student_loss: 0.3954 - distillation_loss: 0.0032 - accuracy: 0.5000 - val_loss: 0.2967 - val_accuracy: 0.5000
+✅ Student model training completed (1.1 minutes).
+🧪 Evaluating model on test set...
+
+54/54 [==============================] - 0s 1ms/step
+📊 Test Performance:
+   ✅ Accuracy : 0.8594
+   🎯 Precision: 0.8199
+   🔁 Recall   : 0.9212
+   🧠 F1 Score : 0.8676
+   🧬 ROC AUC  : 0.9488
+
+💾 Report saved: /app/lucenai/models/distilbert_sentiment/student_model/test_report.json
+🖼️ Confusion matrix saved: /app/lucenai/models/distilbert_sentiment/student_model/confusion_matrix.png
+🖼️ ROC curve saved: /app/lucenai/models/distilbert_sentiment/student_model/roc_curve.png
+💾 Saving model to: /app/lucenai/models/distilbert_sentiment/student_model
+✅ Model weights saved to: /app/lucenai/models/distilbert_sentiment/student_model/checkpoint/weights
+✅ Tokenizer saved to: /app/lucenai/models/distilbert_sentiment/student_model/tokenizer

@@ -25,7 +25,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from lucenai.config.settings import MODEL_PATHS
 from lucenai.training.distillation import train_evaluate_student_model
-from lucenai.training.evaluation import evaluate_model_on_test_set
 from lucenai.training.model import load_best_model_and_tokenizer, train_distilbert_model
 from lucenai.training.preprocess import load_and_preprocess_dataset
 from lucenai.training.tokenizer import adapt_tokenizer_for_student, get_tokenizer_and_dataset
@@ -123,17 +122,17 @@ def main() -> None:
         )
 
         # Build, fine-tune, compile, fit and save model.
-        train_distilbert_model(train_dataset, val_dataset, tokenizer)
+        train_distilbert_model(
+            train_dataset, val_dataset, 
+            tokenizer, 
+            raw_val_texts, raw_val_labels
+        )
 
     # Load model and tokenizer
     best_model, tokenizer = load_best_model_and_tokenizer(
         model_path=MODEL_PATHS.best_weights,
         tokenizer_path=MODEL_PATHS.best_tokenizer
     )
-
-    # Final test evaluation of fine tuned model
-    assert raw_test_texts is not None and raw_test_labels is not None
-    evaluate_model_on_test_set(best_model, tokenizer, raw_test_texts, raw_test_labels, output_dir=MODEL_PATHS.best_root)
 
     # Launch distillation if requested
     if args.distill:

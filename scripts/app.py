@@ -27,7 +27,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 # Local imports (after sys.path modification if needed)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from lucenai.api.predict import predict_sentiment, aggregate_sentiment
+from lucenai.api.predict import aggregate_sentiment, predict_sentiment
 from lucenai.api.schemas import TextInput
 from lucenai.config.settings import API_METADATA
 
@@ -100,12 +100,14 @@ async def analyze_file(file: UploadFile = File(...)):
         tweets = json.loads(content)
 
         if not isinstance(tweets, list):
-            raise HTTPException(status_code=400, detail="Uploaded file must contain a list of tweet objects.")
+            raise HTTPException(status_code=400,
+             detail="Uploaded file must contain a list of tweet objects.")
 
         texts = [t.get("text", "") for t in tweets if isinstance(t, dict) and "text" in t]
 
         if not texts:
-            raise HTTPException(status_code=422, detail="No valid 'text' fields found in uploaded file.")
+            raise HTTPException(status_code=422,
+             detail="No valid 'text' fields found in uploaded file.")
 
         # return aggregate_sentiment(texts)
         # +Debug:

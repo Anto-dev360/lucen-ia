@@ -13,16 +13,16 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# === GENERAL ===
-
+# Project base configuration
 PROJECT_NAME = "lucen_ai"
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent    # Root directory of the project
 
-
-# === DATA PATHS ===
 
 @dataclass
 class DataPaths:
+    """
+    Paths to all relevant datasets used in the project, including raw and split files.
+    """
     data_dir: Path = BASE_DIR / "data"
     raw_dataset: Path = data_dir / "BTC_Tweets_Sentiments.csv"
     train: Path = data_dir / "train.csv"
@@ -33,10 +33,13 @@ class DataPaths:
 DATA_PATHS = DataPaths()
 
 
-# === MODEL PATHS ===
-
 @dataclass
 class ModelPaths:
+    """
+    Directory structure for storing trained models:
+    - Teacher model (fine-tuned)
+    - Student model (distilled)
+    """
     base: Path = BASE_DIR / "lucenai" / "models" / "distilbert_sentiment"
 
     # Best fine-tuned model
@@ -57,10 +60,13 @@ class ModelPaths:
 MODEL_PATHS = ModelPaths()
 
 
-# === LOGGING PATHS ===
-
 @dataclass
 class LoggingPaths:
+    """
+    Paths for logging training progress:
+    - TensorBoard logs
+    - CSV training logs
+    """
     tensorboard_log_dir: Path = MODEL_PATHS.base / "logs" / "training"
     csv_log_file: Path = tensorboard_log_dir / "training_log.csv"
 
@@ -78,10 +84,12 @@ class LoggingPaths:
 LOGGING_PATHS = LoggingPaths()
 
 
-# === TRAINING PARAMETERS ===
-
 @dataclass(frozen=True)
 class TrainingParams:
+    """
+    Core training hyperparameters for the teacher model, including optimizer settings,
+    dropout, and sequence length.
+    """
     model_name: str = "distilbert-base-uncased"
     batch_size: int = 32
     epochs: int = 10
@@ -93,25 +101,27 @@ class TrainingParams:
 TRAINING_PARAMS = TrainingParams()
 
 
-# === DISTILLATION PARAMETERS ===
-
 @dataclass(frozen=True)
 class DistillationParams:
-    temperature: float = 1.0    # Temperature for soft target smoothing.
-    alpha: float = 0.3          # Weight between distillation and ground truth loss.
-    learning_rate: float = 1e-4 # Optimizer learning rate.
-    vocab_size: int = 30522     # Vocabulary size (e.g., from tokenizer).
-    embedding_dim: int = 64     # Dimension of token embeddings.
-    dropout_rate: float = 0.3   # Dropout rate.
+    """
+    Specific parameters used for knowledge distillation between teacher and student models.
+    """
+    temperature: float = 1.0
+    alpha: float = 0.3
+    learning_rate: float = 1e-4
+    vocab_size: int = 30522
+    embedding_dim: int = 64
+    dropout_rate: float = 0.3
     epochs: int = 5
 
-DISTILATION_PARAMS = DistillationParams()
+DISTILLATION_PARAMS = DistillationParams()
 
-
-# === CALLBACK SETTINGS ===
 
 @dataclass(frozen=True)
 class CallbackConfig:
+    """
+    Settings for model training callbacks such as early stopping and learning rate reduction.
+    """
     early_stopping_patience: int = 2
     lr_reduce_patience: int = 3
     lr_reduce_factor: float = 0.5
@@ -120,10 +130,11 @@ class CallbackConfig:
 CALLBACK_CONFIG = CallbackConfig()
 
 
-# === SENTIMENT LABELS ===
-
 @dataclass(frozen=True)
 class SentimentLabels:
+    """
+    Canonical labels used throughout the sentiment analysis pipeline.
+    """
     positive: str = "positive"
     negative: str = "negative"
     invalid: str = "invalid"
@@ -131,13 +142,15 @@ class SentimentLabels:
 LABELS = SentimentLabels()
 
 
-# === API METADATA ===
-
 @dataclass(frozen=True)
 class APIMetadata:
+    """
+    Metadata configuration for the sentiment analysis API (FastAPI).
+    Includes title, version, description in french and custom threshold
+    """
     title: str = "API d'analyse de sentiment"
     version: str = "1.0"
-    threshold: float = 0.27
+    threshold: float = 0.55
     description: str = field(init=False)
 
     def __post_init__(self):

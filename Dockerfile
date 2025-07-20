@@ -31,8 +31,8 @@ ENV TF_CPP_MIN_LOG_LEVEL=2
 # === 🚀 Entry point ===
 # CMD ["python", "scripts/train.py"]
 # Force fine-tuned model building
-# CMD ["python", "scripts/train.py", "-f"]
+CMD ["python", "scripts/train.py", "-f"]
 # Run distillation:
 # CMD ["python", "scripts/train.py", "-d"]
 # Force fine-tuned model building and run distillation:
-CMD ["python", "scripts/train.py", "-d", "-f"]
+# CMD ["python", "scripts/train.py", "-d", "-f"]
