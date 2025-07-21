@@ -18,57 +18,68 @@ This project aims to analyze **Bitcoin (BTC)** sentiment using public Twitter da
 
 ```bash
 lucen-ai/
-├── data/                              # 📊 Dataset (raw)
+├── data/                              # Dataset (raw)
 │   └── BTC_Tweets_Sentiments.csv
 ├── docs/
 │   ├── MVP_Sprints.txt                # Agile sprints 
 │   └── project_pitch.pdf              # Presentation of the full lucen-ai project
-├── notebooks/                         # 📓 Jupyter notebooks (EDA & experimentation)
-│   ├── data/                          # Intermediate files used during experimentation
+├── notebooks/                         # Jupyter notebooks (EDA & experimentation)
+│   ├── data/                          # Datasets used during experimentation
+│   │   └── distilroberta/             # Optimized datasets for distilROBERTa
 │   ├── logs/                          # Training logs (TensorBoard, etc.)
 │   ├── models/                        # Temporary model outputs
 │   ├── 01-preparation_dataset.ipynb      # Data cleaning and preparation
-│   ├── 02-BERTweet_vs_distilBERT.ipynb   # Model comparison notebook
+│   ├── 02-TweetModels_Comparaison.ipynb  # Models comparison notebook
 │   ├── 03-analyse_post_finetuning.ipynb  # Explore result of fine-tuned model
 │   └── 04-compare_teacher_student.ipynb  # Compare models performance and RAM/Disk occupation
-├─│ ─ lucenai/                           # 🧠 Core Python package
-│   ├── training/                      # 🔧 Data pipeline and model logic
+├── lucenai/                           # Core Python package
+│   ├── training/                      # Data pipeline and model logic
 │   │   ├── preprocess.py              # Text preprocessing
 │   │   ├── tokenizer.py               # Tokenizer loading/wrapping
 │   │   ├── model.py                   # Model architecture & compilation
 │   │   ├── evaluation.py              # Evaluation functions
 │   │   ├── distillation.py            # Distillation of the fine-tuned model
 │   │   ├── utils.py                   # Utility functions
-│   │   └── models/distilbert_sentiment    # 🧠 Generated models
-│   │       ├── checkpoint/best_model/     # Fine-tuned model weight
-│   │       ├── tokenizer/                 # Fine-tuned model tokenizer
-│   │       ├── logs/teacher/              # Fine-tuned model logs
-│   │       ├── student_model/
-│   │       │   ├── checkpoint/            # Student weights
-│   │       │   └── tokenizer/             # Student tokenizer
-│   │       └── logs/student/              # Student logs 
-│   ├── api/                           # 🚀 FastAPI application
+│   │   └── models/distilbert_sentiment   # Generated models (fine-tuned & student)
+│   │       ├── checkpoint/best_model/    # Fine-tuned model weight
+│   │       ├── logs/training/            # Fine-tuneed model training logs
+│   │       ├── tokenizer/                # Fine-tuned model tokenizer
+│   │       ├── calibration_data.csv      # Fine-tuned model output calibration
+│   │       ├── confusion_matrix.png      # Fine-tuned model confusion matrix
+│   │       ├── roc_curve.png             # Fine-tuned model ROC curve
+│   │       ├── test_report.json          # Fine-tuned model test report
+│   │       └── student_model/            # Results of distillation
+│   │           ├── checkpoint/           # Student weights
+│   │           ├── tokenizer/            # Student tokenizer
+│   │           ├── confusion_matrix.png  # Student confusion matrix
+│   │           ├── roc_curve.png         # Student ROC curve
+│   │           └── test_report.json      # Student test report
+│   ├── api/                           # FastAPI application
 │   │   ├── predict.py                 # Inference endpoint
 │   │   ├── utils.py
 │   │   └── schemas.py                 # Pydantic schemas
-│   ├── config/                        # ⚙️ Project configuration
+│   ├── config/                        # Project configuration
 │   │   └── settings.py
-│   ├── frontend/                      # 🌐 Web frontend (basic UI)
+│   ├── frontend/                      # Web frontend (basic UI)
 │   │   ├── favicon.ico
 │   │   ├── index.html
 │   │   ├── app.js
 │   │   └── style.css
 │   └── tests/ 
-│       └──  crypto_data.json          # Example BTC tweets
-├── scripts/                           # 🛠️ CLI entrypoints
+│       ├── crypto_data_neg.json       # Example BTC tweets 80% negative
+│       └── crypto_data_pos.json       # Example BTC tweets 80% positive
+├── scripts/                           # CLI entrypoints
 │   ├── train.py                       # Launch model training
 │   ├── serve_and_tunnel.sh            # Launch FastAPI server
 │   └── app.py                         # FastAPI entry point
-├── README.md                          # 📖 Project overview and instructions
+├── README.md                          # Project overview and instructions
 ├── Dockerfile                         # Dockerfile for training environment (GPU-enabled)
 ├── Dockerfile.api                     # Dockerfile for inference via API
 ├── requirements.txt                   # Dependencies for model building
+├── .dockerignore
 ├── .gitignore
+├── .ruff.toml
+├── pyrightconfig.json
 └── LICENSE
 ```
 
