@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Gestion de l'upload et analyse des sentiments Twitter
 const uploadForm = document.getElementById('uploadForm');
-const DEBUG = true;
+const DEBUG = false;
 
 if (uploadForm) {
   uploadForm.addEventListener('submit', async function (e) {

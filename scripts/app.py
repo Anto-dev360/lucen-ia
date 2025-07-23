@@ -31,6 +31,8 @@ from lucenai.api.predict import aggregate_sentiment, predict_sentiment
 from lucenai.api.schemas import TextInput
 from lucenai.config.settings import API_METADATA
 
+DEBUG_MODE = False  # True to enable debug logs, False to disable
+
 # === Initialize FastAPI ===
 app = FastAPI(
     title=API_METADATA.title,
@@ -109,21 +111,20 @@ async def analyze_file(file: UploadFile = File(...)):
             raise HTTPException(status_code=422,
              detail="No valid 'text' fields found in uploaded file.")
 
-        # return aggregate_sentiment(texts)
-        # +Debug:
-                # Liste des prédictions individuelles
-        detailed = [predict_sentiment(text) for text in texts]
-        for i, pred in enumerate(detailed):
-            pred["text"] = texts[i]  # ajoute le texte pour affichage/debug
+        if not DEBUG_MODE:
+            return aggregate_sentiment(texts)
+        else:
+            # List of individual predictions
+            detailed = [predict_sentiment(text) for text in texts]
+            for i, pred in enumerate(detailed):
+                pred["text"] = texts[i]
 
-        aggregate = aggregate_sentiment(texts)
+            aggregate = aggregate_sentiment(texts)
 
-        return {
-            **aggregate,
-            "details": detailed  # 👈 inclus ici
-        }
-        # -Debug
-
+            return {
+                **aggregate,
+                "details": detailed
+            }
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format.")
